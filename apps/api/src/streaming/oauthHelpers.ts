@@ -22,7 +22,6 @@ export interface StoredTokens {
 
 // ── State helpers (CSRF protection) ──────────────────────────────────────────
 
-const STATE_VERSION = 'v1'
 const STATE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
 function stateSecret(): string {
@@ -31,14 +30,30 @@ function stateSecret(): string {
   return s
 }
 
+export interface OAuthState {
+  userId: string
+  returnOrigin?: string
+  redirectUri?: string
+}
+
 /**
  * Generates a signed, expiring state string for an OAuth flow.
- * Format: `v1.<userId>.<expiresAt>.<nonce>.<hmac>`
+ * Format: `v2.<userId>.<expiresAt>.<nonce>.<returnOriginB64>.<redirectUriB64>.<hmac>`
+ * `returnOrigin` / `redirectUri` are base64url or `-` when omitted.
  */
-export function generateState(userId: string): string {
+export function generateState(
+  userId: string,
+  extra: { returnOrigin?: string; redirectUri?: string } = {},
+): string {
   const expiresAt = Date.now() + STATE_TTL_MS
   const nonce = crypto.randomBytes(16).toString('hex')
-  const payload = `${STATE_VERSION}.${userId}.${expiresAt}.${nonce}`
+  const returnOrigin = extra.returnOrigin
+    ? Buffer.from(extra.returnOrigin).toString('base64url')
+    : '-'
+  const redirectUri = extra.redirectUri
+    ? Buffer.from(extra.redirectUri).toString('base64url')
+    : '-'
+  const payload = `v2.${userId}.${expiresAt}.${nonce}.${returnOrigin}.${redirectUri}`
   const sig = crypto
     .createHmac('sha256', stateSecret())
     .update(payload)
@@ -46,33 +61,59 @@ export function generateState(userId: string): string {
   return `${payload}.${sig}`
 }
 
+function decodeStateField(value: string): string | undefined {
+  if (!value || value === '-') return undefined
+  return Buffer.from(value, 'base64url').toString()
+}
+
 /**
- * Verifies a state string and returns the embedded userId.
- * Throws if the state is malformed, expired, or has an invalid signature.
+ * Verifies a state string and returns the embedded userId and optional
+ * return/redirect URLs. Accepts v1 (legacy) and v2 payloads.
  */
-export function verifyState(state: string): string {
+export function verifyState(state: string): OAuthState {
   const parts = state.split('.')
-  if (parts.length !== 5) throw new Error('Invalid state format')
+  const version = parts[0]
 
-  const [version, userId, expiresAtStr, nonce, receivedSig] = parts as [string, string, string, string, string]
+  if (version === 'v1') {
+    if (parts.length !== 5) throw new Error('Invalid state format')
+    const [, userId, expiresAtStr, nonce, receivedSig] = parts as [string, string, string, string, string]
+    assertFreshSignature(`v1.${userId}.${expiresAtStr}.${nonce}`, expiresAtStr, receivedSig)
+    return { userId }
+  }
 
-  if (version !== STATE_VERSION) throw new Error('Unknown state version')
+  if (version === 'v2') {
+    if (parts.length !== 7) throw new Error('Invalid state format')
+    const [, userId, expiresAtStr, nonce, returnOriginB64, redirectUriB64, receivedSig] = parts as [
+      string, string, string, string, string, string, string,
+    ]
+    assertFreshSignature(
+      `v2.${userId}.${expiresAtStr}.${nonce}.${returnOriginB64}.${redirectUriB64}`,
+      expiresAtStr,
+      receivedSig,
+    )
+    return {
+      userId,
+      returnOrigin: decodeStateField(returnOriginB64),
+      redirectUri: decodeStateField(redirectUriB64),
+    }
+  }
 
+  throw new Error('Unknown state version')
+}
+
+function assertFreshSignature(payload: string, expiresAtStr: string, receivedSig: string): void {
   const expiresAt = parseInt(expiresAtStr, 10)
   if (isNaN(expiresAt) || Date.now() > expiresAt) throw new Error('State has expired')
 
-  const payload = `${version}.${userId}.${expiresAtStr}.${nonce}`
   const expectedSig = crypto
     .createHmac('sha256', stateSecret())
     .update(payload)
     .digest('hex')
 
-  // Constant-time comparison to prevent timing attacks
-  if (!crypto.timingSafeEqual(Buffer.from(receivedSig, 'hex'), Buffer.from(expectedSig, 'hex'))) {
+  if (expectedSig.length !== receivedSig.length
+    || !crypto.timingSafeEqual(Buffer.from(receivedSig, 'hex'), Buffer.from(expectedSig, 'hex'))) {
     throw new Error('Invalid state signature')
   }
-
-  return userId
 }
 
 // ── Token persistence ─────────────────────────────────────────────────────────
