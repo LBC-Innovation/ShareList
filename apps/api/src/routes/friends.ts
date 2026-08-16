@@ -15,6 +15,7 @@ import { requireAuth } from '../middleware/auth'
 import { supabaseAdmin, supabaseAuth } from '../lib/supabase'
 import { getAccessibleSharelist } from '../lib/sharelistAccess'
 import { sendShareInviteEmail } from '../lib/email'
+import { clientOrigin } from '../lib/origins'
 
 const router = Router()
 
@@ -44,9 +45,6 @@ async function getUserEmail(userId: string): Promise<string> {
   return data.user.email
 }
 
-function clientOrigin(): string {
-  return process.env['CLIENT_ORIGIN'] ?? 'http://localhost:5173'
-}
 
 // ── GET /friends ──────────────────────────────────────────────────────────────
 

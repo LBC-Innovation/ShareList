@@ -1,0 +1,57 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-api.yml'
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  compile:
+    name: Compile API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck API
+        run: npm run build -w @sharelist/api
+
+  deploy:
+    name: Deploy API to Vercel
+    needs: compile
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build Vercel artifacts
+        run: vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
