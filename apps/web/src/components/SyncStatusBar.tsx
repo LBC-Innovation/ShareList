@@ -25,7 +25,7 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
   if (isLoading) {
     return (
       <Flex justify="space-between" align="center" gap={12} style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-        <Skeleton.Button active size="small" style={{ width: '160px', height: '20px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+        <Skeleton.Button active size="small" style={{ width: '200px', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
         <Skeleton.Input active size="small" style={{ width: '120px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
       </Flex>
     )
@@ -33,33 +33,43 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
 
   return (
     <Flex justify="space-between" align="center" gap={12} style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-      <Flex align="center" gap={12} wrap="wrap" style={{ minWidth: 0 }}>
+      <Flex align="center" gap={8} wrap="wrap" style={{ minWidth: 0 }}>
         <Button
-          type="text"
           size="small"
           loading={crossSyncing}
           icon={!crossSyncing && <SwapOutlined />}
           onClick={onCrossSync}
-          style={{ color: '#4ADE80', fontSize: '12px', fontWeight: 600, padding: '0 6px', height: '24px' }}
+          style={{
+            background: 'transparent',
+            border: '1px solid rgba(74, 222, 128, 0.45)',
+            color: '#4ADE80',
+            borderRadius: '8px',
+            height: '28px',
+            padding: '0 10px',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
         >
-          {crossSyncing ? '' : 'Cross Sync'}
+          {crossSyncing ? '' : 'Sync Lists'}
         </Button>
         <Button
-          type="text"
           size="small"
           loading={syncing}
           icon={!syncing && <SyncOutlined />}
           onClick={onSync}
-          style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, padding: '0 6px', height: '24px' }}
+          style={{
+            background: 'transparent',
+            border: '1px solid rgba(56, 189, 248, 0.4)',
+            color: '#38BDF8',
+            borderRadius: '8px',
+            height: '28px',
+            padding: '0 10px',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
         >
-          {syncing ? '' : 'Force Sync'}
+          {syncing ? '' : 'Fetch Songs'}
         </Button>
-        {syncing && (
-          <span style={{ color: '#38BDF8', fontSize: '12px' }}>syncing…</span>
-        )}
-        {crossSyncing && !syncing && (
-          <span style={{ color: '#4ADE80', fontSize: '12px' }}>cross-syncing…</span>
-        )}
       </Flex>
       {lastSynced && (
         <span style={{ color: '#64748B', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>

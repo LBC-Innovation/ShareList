@@ -53,7 +53,7 @@ export function PlaylistView() {
     const result = await api.crossSyncShareList(id)
     setCrossSyncing(false)
     if (api.isError(result)) {
-      notifyApi.error({ message: 'Cross Sync failed', description: result.error.message, placement: 'topRight' })
+      notifyApi.error({ message: 'Sync Lists failed', description: result.error.message, placement: 'topRight' })
       return
     }
     const { totalAdded, links } = result.data
@@ -65,7 +65,7 @@ export function PlaylistView() {
         .map(l => `${l.playlistName}: ${l.error}`)
         .join('\n')
       notifyApi.error({
-        message: 'Cross Sync failed',
+        message: 'Sync Lists failed',
         description,
         placement: 'topRight',
         duration: 10,
@@ -82,7 +82,7 @@ export function PlaylistView() {
         .map(l => `${l.tracksAdded} track${l.tracksAdded === 1 ? '' : 's'} → ${l.playlistName}`)
         .join('\n')
       notifyApi.success({
-        message: `Cross Sync complete — ${totalAdded} track${totalAdded === 1 ? '' : 's'} added`,
+        message: `Sync Lists complete — ${totalAdded} track${totalAdded === 1 ? '' : 's'} added`,
         description: details || undefined,
         placement: 'topRight',
       })
@@ -98,7 +98,7 @@ export function PlaylistView() {
     const result = await api.syncShareList(id)
     setSyncing(false)
     if (api.isError(result)) {
-      notifyApi.error({ message: 'Sync failed', description: result.error.message, placement: 'topRight' })
+      notifyApi.error({ message: 'Fetch Songs failed', description: result.error.message, placement: 'topRight' })
       return
     }
     setSharelist(result.data)
