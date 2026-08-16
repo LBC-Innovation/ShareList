@@ -48,7 +48,13 @@ export function TrackList({ tracks, shuffling = false, onShuffle }: TrackListPro
           disabled={!canShuffle}
           onClick={onShuffle}
           style={{
-            padding: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            padding: 0,
+            lineHeight: 0,
             background: shuffling ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
             border: '1px solid rgba(56, 189, 248, 0.25)',
             borderRadius: '8px',
@@ -58,7 +64,7 @@ export function TrackList({ tracks, shuffling = false, onShuffle }: TrackListPro
         >
           <Shuffle
             className={shuffling ? 'sl-shuffle-spin' : undefined}
-            style={{ width: '18px', height: '18px', color: shuffling ? '#38BDF8' : '#94A3B8' }}
+            style={{ width: '18px', height: '18px', color: shuffling ? '#38BDF8' : '#94A3B8', display: 'block' }}
           />
         </button>
       </Flex>
