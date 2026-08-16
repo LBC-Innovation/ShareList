@@ -1,8 +1,7 @@
-import { Flex, Spin } from 'antd'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { Layout } from 'antd'
 import { TopNavigation } from './TopNavigation'
 import { BottomNavigation } from './BottomNavigation'
+import { BootScreen } from './BootScreen'
 import { useAuth } from '../context/AuthContext'
 
 export function MainLayout() {
@@ -10,11 +9,7 @@ export function MainLayout() {
   const location = useLocation()
 
   if (loading) {
-    return (
-      <Flex justify="center" align="center" style={{ minHeight: '100vh', background: '#111314' }}>
-        <Spin size="large" />
-      </Flex>
-    )
+    return <BootScreen />
   }
 
   if (!user) {
@@ -23,23 +18,17 @@ export function MainLayout() {
   }
 
   return (
-    <Layout style={{
-      minHeight: '100vh',
-      background: '#111314',
-      position: 'relative',
-      fontFamily: 'Inter, system-ui, sans-serif',
-    }}>
-      {/* Background radial gradient */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100vh',
-        pointerEvents: 'none',
-        background: 'radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.08) 0%, rgba(56, 189, 248, 0.03) 40%, transparent 70%)',
-        zIndex: 0,
-      }} />
+    <div className="sl-app-shell">
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: 'radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.08) 0%, rgba(56, 189, 248, 0.03) 40%, transparent 70%)',
+          zIndex: 0,
+        }}
+      />
 
       <TopNavigation />
 
@@ -48,6 +37,6 @@ export function MainLayout() {
       </div>
 
       <BottomNavigation />
-    </Layout>
+    </div>
   )
 }

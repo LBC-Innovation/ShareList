@@ -17,6 +17,7 @@ export default defineConfig({
         'mstile-150x150.png',
         'mstile-310x150.png',
         'mstile-310x310.png',
+        'splash/*.png',
       ],
       manifest: {
         id: '/',
@@ -24,7 +25,7 @@ export default defineConfig({
         short_name: 'ShareList',
         description: 'Share music playlists across Spotify, Apple Music, and YouTube Music.',
         theme_color: '#111314',
-        background_color: '#232625',
+        background_color: '#111314',
         display: 'standalone',
         display_override: ['standalone', 'minimal-ui'],
         start_url: '/',

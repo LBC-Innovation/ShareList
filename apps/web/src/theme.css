@@ -2,8 +2,8 @@
 
 :root {
   --sl-bg: #111314;
-  --sl-top-nav-inner: 52px;
-  --sl-bottom-nav-inner: 64px;
+  --sl-nav: #161819;
+  --sl-bottom-nav-inner: 56px;
   --sl-install-offset: 0px;
   --sl-safe-top: env(safe-area-inset-top, 0px);
   --sl-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -11,27 +11,31 @@
   --sl-safe-right: env(safe-area-inset-right, 0px);
 }
 
+html {
+  font-size: 16px;
+  color-scheme: dark;
+  height: 100%;
+  height: 100dvh;
+  height: -webkit-fill-available;
+  background: var(--sl-bg);
+}
+
 html,
 body,
 #root {
   margin: 0;
   padding: 0;
-  min-height: 100%;
   background: var(--sl-bg);
   font-family: 'Inter', system-ui, sans-serif;
   color: #F1F5F9;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
-html {
-  font-size: 16px;
-  color-scheme: dark;
+body,
+#root {
   height: 100%;
-}
-
-body {
-  min-height: 100dvh;
-  min-height: 100svh;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%;
 }
@@ -90,27 +94,41 @@ input {
   line-height: 1.5;
 }
 
-/* App chrome */
-.sl-top-nav {
+/* App chrome — fill the screen; bottom nav sits on the device edge */
+.sl-app-shell {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  height: -webkit-fill-available;
+  background: var(--sl-bg);
+  overflow: hidden;
+}
+
+.sl-top-nav {
+  position: relative;
+  flex-shrink: 0;
   z-index: 50;
   background: #111314;
   border-bottom: 1px solid #2A2D30;
-  padding: calc(12px + var(--sl-safe-top)) max(16px, var(--sl-safe-right)) 12px max(16px, var(--sl-safe-left));
+  padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
 }
 
 .sl-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  flex-shrink: 0;
   z-index: 50;
-  background: #161819;
+  margin: 0;
+  background: var(--sl-nav);
   border-top: 1px solid #2A2D30;
-  padding-bottom: var(--sl-safe-bottom);
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .sl-bottom-nav button {
@@ -121,13 +139,32 @@ input {
 .sl-app-shell-content {
   position: relative;
   z-index: 1;
-  padding-top: calc(var(--sl-top-nav-inner) + var(--sl-safe-top));
-  padding-bottom: calc(var(--sl-bottom-nav-inner) + var(--sl-safe-bottom) + var(--sl-install-offset));
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--sl-install-offset);
+}
+
+.sl-boot {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sl-bg);
+  z-index: 100;
+}
+
+.sl-boot img {
+  width: min(240px, 70vw);
+  height: auto;
 }
 
 .sl-auth-shell {
-  min-height: 100dvh;
-  min-height: 100svh;
+  height: 100%;
+  min-height: 100%;
   background: var(--sl-bg);
   position: relative;
   overflow-x: hidden;
@@ -154,7 +191,7 @@ input {
   position: fixed;
   left: max(12px, var(--sl-safe-left));
   right: max(12px, var(--sl-safe-right));
-  bottom: calc(var(--sl-bottom-nav-inner) + var(--sl-safe-bottom) + 10px);
+  bottom: calc(var(--sl-bottom-nav-inner) + env(safe-area-inset-bottom, 0px) + 10px);
   z-index: 60;
   background: rgba(22, 24, 25, 0.96);
   border: 1px solid rgba(56, 189, 248, 0.28);
@@ -184,7 +221,7 @@ input {
 .sl-fab {
   position: fixed;
   right: max(16px, var(--sl-safe-right));
-  bottom: calc(92px + var(--sl-safe-bottom) + var(--sl-install-offset));
+  bottom: calc(var(--sl-bottom-nav-inner) + env(safe-area-inset-bottom, 0px) + 12px + var(--sl-install-offset));
   z-index: 40;
 }
 

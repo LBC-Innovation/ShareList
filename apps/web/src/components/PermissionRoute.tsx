@@ -12,7 +12,7 @@ export function PermissionRoute({ permission, children }: Props) {
   const { user, loading } = useAuth()
   if (loading) {
     return (
-      <Flex justify="center" align="center" style={{ minHeight: '100vh' }}>
+      <Flex justify="center" align="center" style={{ minHeight: '100%' }}>
         <Spin size="large" />
       </Flex>
     )
