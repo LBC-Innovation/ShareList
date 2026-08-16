@@ -499,7 +499,7 @@ export function Friends() {
   )
 
   return (
-    <Content style={{ maxWidth: '1100px', margin: '0 auto', padding: isCompact ? '24px 16px 100px' : '24px 20px 100px', width: '100%' }}>
+    <Content style={{ maxWidth: '1100px', margin: '0 auto', padding: isCompact ? '20px 16px 28px' : '24px 20px 28px', width: '100%' }}>
       {contextHolder}
       <Title level={1} style={{ color: SL.text, margin: '0 0 20px', fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px' }}>
         Friends

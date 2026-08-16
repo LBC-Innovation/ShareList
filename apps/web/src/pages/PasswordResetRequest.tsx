@@ -4,6 +4,7 @@ import { Button, Card, Flex, Form, Input, Typography, Alert } from 'antd'
 import { MailOutlined, CheckCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { Music2 } from 'lucide-react'
 import { requestPasswordReset, isError } from '../lib/api'
+import { AuthShell } from '../components/AuthShell'
 
 const { Title, Text, Link } = Typography
 
@@ -25,16 +26,7 @@ export function PasswordResetRequest() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#111314',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-    }}>
+    <AuthShell>
       {/* Background gradient */}
       <div style={{
         position: 'absolute',
@@ -47,6 +39,7 @@ export function PasswordResetRequest() {
       }} />
 
       <Card
+        className="sl-auth-card"
         style={{
           maxWidth: '440px',
           width: '100%',
@@ -238,6 +231,6 @@ export function PasswordResetRequest() {
           </>
         )}
       </Card>
-    </div>
+    </AuthShell>
   )
 }

@@ -49,7 +49,7 @@ export function ShareListsView() {
   }, [])
 
   return (
-    <Content style={{ maxWidth: '480px', margin: '0 auto', padding: '72px 20px 100px', width: '100%' }}>
+    <Content style={{ maxWidth: '480px', margin: '0 auto', padding: '24px 16px 28px', width: '100%' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>

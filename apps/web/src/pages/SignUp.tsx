@@ -4,6 +4,7 @@ import { Button, Card, Checkbox, Flex, Form, Input, Typography, Alert } from 'an
 import { LockOutlined, MailOutlined } from '@ant-design/icons'
 import { Music2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { AuthShell } from '../components/AuthShell'
 import * as api from '../lib/api'
 
 const { Title, Text, Link } = Typography
@@ -58,16 +59,7 @@ export function SignUp() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#111314',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-    }}>
+    <AuthShell>
       {/* Background gradient */}
       <div style={{
         position: 'absolute',
@@ -80,6 +72,7 @@ export function SignUp() {
       }} />
 
       <Card
+        className="sl-auth-card"
         style={{
           maxWidth: '440px',
           width: '100%',
@@ -233,6 +226,6 @@ export function SignUp() {
           </Text>
         </Flex>
       </Card>
-    </div>
+    </AuthShell>
   )
 }

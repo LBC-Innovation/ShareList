@@ -43,8 +43,7 @@ export function MainLayout() {
 
       <TopNavigation />
 
-      {/* Page content — padded for fixed top + bottom nav */}
-      <div style={{ paddingTop: '57px', paddingBottom: '72px', position: 'relative', zIndex: 1 }}>
+      <div className="sl-app-shell-content">
         <Outlet />
       </div>
 

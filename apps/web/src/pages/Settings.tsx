@@ -14,6 +14,8 @@ import { LinkOutlined, DisconnectOutlined, CheckOutlined, ExclamationCircleOutli
 import * as api from '../lib/api'
 import type { ConnectedService, StreamingProvider } from '../lib/api'
 import { LinkServiceModal } from '../components/LinkServiceModal'
+import { usePwaInstall } from '../hooks/usePwaInstall'
+import { Download, Share } from 'lucide-react'
 
 const { Content } = Layout
 const { Title, Text } = Typography
@@ -40,6 +42,9 @@ export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const screens = Grid.useBreakpoint()
   const isCompact = !screens.md
+
+  const { installed, ios, hasNativePrompt, install } = usePwaInstall()
+  const [showIosHelp, setShowIosHelp] = useState(false)
 
   const [providers, setProviders] = useState<StreamingProvider[]>([])
   const [connected, setConnected] = useState<ConnectedService[]>([])
@@ -129,7 +134,7 @@ export function Settings() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Content style={{ maxWidth: '800px', margin: '0 auto', padding: isCompact ? '24px 16px 24px' : '32px 24px 24px' }}>
+    <Content style={{ maxWidth: '800px', margin: '0 auto', padding: isCompact ? '20px 16px 28px' : '32px 24px 28px' }}>
       {contextHolder}
 
       <Title
@@ -293,6 +298,92 @@ export function Settings() {
               </div>
             )
           })
+        )}
+      </Card>
+
+      <div style={{ margin: '28px 0 8px' }}>
+        <Text style={{ color: SL.muted, fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          App
+        </Text>
+      </div>
+
+      <Card
+        style={{
+          background: 'rgba(28, 31, 33, 0.4)',
+          border: '1px solid rgba(56, 189, 248, 0.1)',
+          borderRadius: '16px',
+          backdropFilter: 'blur(20px)',
+        }}
+        styles={{ body: { padding: isCompact ? '16px' : '18px 24px' } }}
+      >
+        <Flex vertical={isCompact} align={isCompact ? 'stretch' : 'center'} justify="space-between" gap={14}>
+          <Flex align="center" gap={14} style={{ minWidth: 0 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Download style={{ width: 20, height: 20, color: '#FFFFFF' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <Text style={{ color: SL.text, fontSize: 15, fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                {installed ? 'Installed on this device' : 'Install ShareList'}
+              </Text>
+              <Text style={{ color: SL.muted, fontSize: 13, lineHeight: 1.45 }}>
+                {installed
+                  ? 'ShareList is running as an installed app on this device.'
+                  : ios
+                    ? 'Add ShareList to your Home Screen for a full-screen, phone-first app.'
+                    : 'Install ShareList as an app for a full-screen experience on this device.'}
+              </Text>
+            </div>
+          </Flex>
+          {!installed && hasNativePrompt && (
+            <Button
+              block={isCompact}
+              onClick={() => { void install() }}
+              style={{
+                background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                borderRadius: 10,
+                height: 40,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              Install
+            </Button>
+          )}
+          {!installed && ios && !hasNativePrompt && (
+            <Button
+              block={isCompact}
+              onClick={() => setShowIosHelp(open => !open)}
+              style={{
+                background: `${SL.accent}18`,
+                border: `1px solid ${SL.accent}44`,
+                color: SL.accent,
+                borderRadius: 10,
+                height: 40,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {showIosHelp ? 'Hide steps' : 'How to add'}
+            </Button>
+          )}
+          {!installed && !hasNativePrompt && !ios && (
+            <Text style={{ color: SL.muted, fontSize: 13 }}>
+              Open ShareList in Chrome or Edge, or on your phone, to install it.
+            </Text>
+          )}
+        </Flex>
+        {ios && showIosHelp && !installed && (
+          <ol style={{ margin: '14px 0 0', paddingLeft: 18, color: '#94A3B8', fontSize: 13, lineHeight: 1.6 }}>
+            <li>Tap <Share style={{ width: 14, height: 14, verticalAlign: '-2px' }} /> Share in Safari</li>
+            <li>Tap <strong style={{ color: SL.text }}>Add to Home Screen</strong></li>
+            <li>Tap <strong style={{ color: SL.text }}>Add</strong></li>
+          </ol>
         )}
       </Card>
 

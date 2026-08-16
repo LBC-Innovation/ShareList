@@ -4,6 +4,7 @@ import { Button, Card, Flex, Spin, Typography, Alert } from 'antd'
 import { Music2 } from 'lucide-react'
 import { storeToken } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { AuthShell } from '../components/AuthShell'
 
 const { Text } = Typography
 
@@ -34,16 +35,7 @@ export function MagicLinkConfirm() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#111314',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-    }}>
+    <AuthShell>
       {/* Background gradient */}
       <div style={{
         position: 'absolute',
@@ -56,6 +48,7 @@ export function MagicLinkConfirm() {
       }} />
 
       <Card
+        className="sl-auth-card"
         style={{
           maxWidth: '440px',
           width: '100%',
@@ -109,6 +102,6 @@ export function MagicLinkConfirm() {
           </Flex>
         )}
       </Card>
-    </div>
+    </AuthShell>
   )
 }

@@ -21,10 +21,9 @@ export function LaunchStreamingFAB({ externalUrl }: LaunchStreamingFABProps) {
   return (
     <button
       onClick={handleClick}
+      aria-label="Open in streaming app"
+      className="sl-fab"
       style={{
-        position: 'fixed',
-        bottom: '92px',
-        right: '20px',
         width: '56px',
         height: '56px',
         borderRadius: '50%',
@@ -34,7 +33,6 @@ export function LaunchStreamingFAB({ externalUrl }: LaunchStreamingFABProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 999,
         boxShadow: '0 8px 24px rgba(56, 189, 248, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3)',
         transition: 'transform 0.15s ease, box-shadow 0.15s ease',
       }}

@@ -14,7 +14,7 @@ interface SyncStatusBarProps {
 const actionButtonStyle: CSSProperties = {
   background: 'transparent',
   borderRadius: '8px',
-  height: '28px',
+  height: '44px',
   padding: '0 8px',
   fontSize: '12px',
   fontWeight: 600,
@@ -43,9 +43,9 @@ export function SyncStatusBar({
         style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}
       >
         <div style={actionGroupStyle}>
-          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
-          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
-          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '44px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '44px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '44px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
         </div>
       </Flex>
     )

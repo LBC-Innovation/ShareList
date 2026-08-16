@@ -5,6 +5,7 @@ import 'antd/dist/reset.css'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
+import { applyStandaloneClass, initPwaInstallListener } from './lib/pwa'
 
 // Handle Supabase hash-based redirects (magic link, password reset, etc.)
 // before React mounts. The root route redirects immediately and strips the
@@ -20,6 +21,9 @@ import { AuthProvider } from './context/AuthContext.tsx'
     window.history.replaceState(null, '', window.location.pathname)
   }
 })()
+
+applyStandaloneClass()
+initPwaInstallListener()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element not found')

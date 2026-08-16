@@ -50,16 +50,7 @@ export function TopNavigation() {
   ]
 
   return (
-    <nav style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 50,
-      background: '#111314',
-      borderBottom: '1px solid #2A2D30',
-      padding: '14px 20px',
-    }}>
+    <nav className="sl-top-nav">
       <div style={{ maxWidth: '960px', margin: '0 auto' }}>
         <Flex justify="space-between" align="center">
           {/* Logo */}
@@ -73,7 +64,7 @@ export function TopNavigation() {
               <Music2 style={{ width: '20px', height: '20px', color: '#38BDF8', position: 'absolute', top: 1, left: 1 }} />
               <Music2 style={{ width: '20px', height: '20px', color: '#38BDF8', position: 'absolute', top: 3, left: 3, opacity: 0.5 }} />
             </div>
-            <Flex align="baseline">
+            <Flex align="baseline" className="sl-brand-text">
               <span style={{ color: 'white', fontWeight: 300, fontSize: '18px', letterSpacing: '-0.3px' }}>Share</span>
               <span style={{ color: '#38BDF8', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.3px' }}>List</span>
             </Flex>
@@ -81,7 +72,7 @@ export function TopNavigation() {
 
           {/* Right side */}
           <Flex align="center" gap={16}>
-            <button style={{ position: 'relative', padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            <button type="button" aria-label="Notifications" className="sl-icon-button" style={{ position: 'relative' }}>
               <BellOutlined style={{ fontSize: '20px', color: '#64748B' }} />
             </button>
 
