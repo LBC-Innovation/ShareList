@@ -157,7 +157,7 @@ export function PlaylistView() {
           name={sharelist?.name ?? ''}
           trackCount={tracks.length}
           links={heroLinks}
-          onLinkPlatform={() => setShowLinkModal(true)}
+          onManageList={() => setShowLinkModal(true)}
           isLoading={isLoading}
         />
       </div>
@@ -168,7 +168,6 @@ export function PlaylistView() {
           syncing={syncing}
           crossSyncing={crossSyncing}
           lastSynced={lastSynced}
-          onManage={() => setShowLinkModal(true)}
           onSync={() => { void handleSync() }}
           onCrossSync={() => { void handleCrossSync() }}
         />

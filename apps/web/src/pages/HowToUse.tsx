@@ -34,7 +34,7 @@ const STEPS: Step[] = [
   {
     n: '04',
     title: 'Link their playlist',
-    body: 'Your friend opens the shared list, taps Manage, and links one of their playlists on the same service. Both of you then contribute to the same ShareList.',
+    body: 'Your friend opens the shared list, taps Manage List, and links one of their playlists on the same service. Both of you then contribute to the same ShareList.',
   },
   {
     n: '05',
@@ -49,7 +49,7 @@ const STEPS: Step[] = [
   {
     n: '07',
     title: 'Leave or delete without wiping friends',
-    body: "Manage lets you unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
+    body: "Manage List lets you unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
   },
 ]
 
@@ -114,7 +114,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       },
       {
         key: 'manage',
-        term: 'Manage',
+        term: 'Manage List',
         meaning: 'The panel on a ShareList for adding another playlist, unlinking one, leaving, or deleting (owner only).',
       },
     ],

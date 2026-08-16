@@ -18,7 +18,7 @@ interface PlaylistHeroProps {
   name: string
   trackCount: number
   links: HeroLink[]
-  onLinkPlatform: () => void
+  onManageList: () => void
   isLoading?: boolean
 }
 
@@ -26,7 +26,7 @@ function formatTrackCount(n: number): string {
   return `${n} ${n === 1 ? 'song' : 'songs'}`
 }
 
-export function PlaylistHero({ name, trackCount, links, onLinkPlatform, isLoading = false }: PlaylistHeroProps) {
+export function PlaylistHero({ name, trackCount, links, onManageList, isLoading = false }: PlaylistHeroProps) {
   const images = links.map(l => l.imageUrl).filter((u): u is string => !!u).slice(0, 4)
 
   return (
@@ -128,11 +128,11 @@ export function PlaylistHero({ name, trackCount, links, onLinkPlatform, isLoadin
       {/* Action buttons */}
       <Flex justify="center" align="center" gap={24} style={{ paddingTop: '16px', borderTop: '1px solid #2A2D30' }}>
         <button
-          onClick={onLinkPlatform}
+          onClick={onManageList}
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
         >
           <LinkOutlined style={{ fontSize: '20px', color: '#38BDF8' }} />
-          <span style={{ color: '#38BDF8', fontSize: '12px', fontWeight: 600 }}>Link Platform</span>
+          <span style={{ color: '#38BDF8', fontSize: '12px', fontWeight: 600 }}>Manage List</span>
         </button>
       </Flex>
     </Card>

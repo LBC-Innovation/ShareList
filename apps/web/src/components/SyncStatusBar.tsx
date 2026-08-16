@@ -6,7 +6,6 @@ interface SyncStatusBarProps {
   syncing?: boolean
   crossSyncing?: boolean
   lastSynced?: Date | null
-  onManage?: () => void
   onSync?: () => void
   onCrossSync?: () => void
 }
@@ -22,15 +21,15 @@ function formatLastSynced(date: Date): string {
   return `${diffHours}h ago`
 }
 
-export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing = false, lastSynced, onManage, onSync, onCrossSync }: SyncStatusBarProps) {
+export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing = false, lastSynced, onSync, onCrossSync }: SyncStatusBarProps) {
   if (isLoading) {
     return (
       <Flex justify="space-between" align="center" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
         <Flex align="center" gap={8}>
           <Skeleton.Avatar active size={10} style={{ background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%' }} />
-          <Skeleton.Input active size="small" style={{ width: '200px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+          <Skeleton.Input active size="small" style={{ width: '72px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
         </Flex>
-        <Skeleton.Button active size="small" style={{ width: '60px', height: '20px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+        <Skeleton.Button active size="small" style={{ width: '160px', height: '20px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
       </Flex>
     )
   }
@@ -39,15 +38,14 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
     <Flex justify="space-between" align="center" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
       <Flex align="center" gap={8}>
         <Badge status="processing" color="#4ADE80" />
-        <span style={{ color: '#F1F5F9', fontSize: '13px', fontWeight: 500 }}>Live sync active</span>
         {lastSynced && !syncing && (
-          <span style={{ color: '#64748B', fontSize: '12px' }}>· {formatLastSynced(lastSynced)}</span>
+          <span style={{ color: '#64748B', fontSize: '12px' }}>{formatLastSynced(lastSynced)}</span>
         )}
         {syncing && (
-          <span style={{ color: '#38BDF8', fontSize: '12px' }}>· syncing…</span>
+          <span style={{ color: '#38BDF8', fontSize: '12px' }}>syncing…</span>
         )}
         {crossSyncing && !syncing && (
-          <span style={{ color: '#4ADE80', fontSize: '12px' }}>· cross-syncing…</span>
+          <span style={{ color: '#4ADE80', fontSize: '12px' }}>cross-syncing…</span>
         )}
       </Flex>
       <Flex align="center" gap={12}>
@@ -70,13 +68,6 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
           style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, padding: '0 6px', height: '24px' }}
         >
           {syncing ? '' : 'Force Sync'}
-        </Button>
-        <Button
-          type="link"
-          onClick={onManage}
-          style={{ color: '#38BDF8', fontSize: '13px', fontWeight: 600, padding: 0 }}
-        >
-          Manage
         </Button>
       </Flex>
     </Flex>
