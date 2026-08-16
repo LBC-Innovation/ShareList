@@ -37,7 +37,7 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
         <Button
           size="small"
           loading={crossSyncing}
-          icon={!crossSyncing && <SwapOutlined />}
+          icon={<SwapOutlined />}
           onClick={onCrossSync}
           style={{
             background: 'transparent',
@@ -50,12 +50,12 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
             fontWeight: 600,
           }}
         >
-          {crossSyncing ? '' : 'Sync Lists'}
+          Sync Lists
         </Button>
         <Button
           size="small"
           loading={syncing}
-          icon={!syncing && <SyncOutlined />}
+          icon={<SyncOutlined />}
           onClick={onSync}
           style={{
             background: 'transparent',
@@ -68,7 +68,7 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
             fontWeight: 600,
           }}
         >
-          {syncing ? '' : 'Fetch Songs'}
+          Fetch Songs
         </Button>
       </Flex>
       {lastSynced && (
