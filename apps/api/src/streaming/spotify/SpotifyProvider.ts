@@ -54,8 +54,8 @@ interface SpotifyPlaylistItem {
   name: string
   description: string | null
   tracks: { total: number } | null
-  images: { url: string }[]
-  external_urls: { spotify: string }
+  images: { url: string }[] | null
+  external_urls: { spotify: string } | null
   public: boolean | null
 }
 
@@ -204,8 +204,8 @@ export class SpotifyProvider implements StreamingProvider {
           // Spotify frequently returns 0 here even for populated playlists.
           // We resolve accurate counts below via individual playlist calls.
           trackCount: item.tracks?.total ?? 0,
-          imageUrl: item.images[0]?.url,
-          externalUrl: item.external_urls.spotify,
+          imageUrl: item.images?.[0]?.url,
+          externalUrl: item.external_urls?.spotify,
         })
       }
 
@@ -253,8 +253,8 @@ export class SpotifyProvider implements StreamingProvider {
       name: data.name,
       description: data.description ?? undefined,
       trackCount: data.tracks?.total ?? 0,
-      imageUrl: data.images[0]?.url,
-      externalUrl: data.external_urls.spotify,
+      imageUrl: data.images?.[0]?.url,
+      externalUrl: data.external_urls?.spotify,
     }
   }
 

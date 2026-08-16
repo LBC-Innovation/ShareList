@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Layout, Card, Flex, Typography, Tabs, Form, Input, Select, Button, Empty, Skeleton, notification, Tag } from 'antd'
-import { MailOutlined, UserAddOutlined, SendOutlined, DeleteOutlined } from '@ant-design/icons'
+import {
+  Layout, Card, Flex, Typography, Tabs, Form, Input, Select, Button, Empty,
+  Skeleton, notification, Tag, Switch, Popconfirm,
+} from 'antd'
+import { MailOutlined, UserAddOutlined, DeleteOutlined } from '@ant-design/icons'
 import { Users } from 'lucide-react'
 import * as api from '../lib/api'
-import type { Friend, PendingInvite, ShareListSummary } from '../lib/api'
+import type { FriendPerson, ShareListSummary } from '../lib/api'
 
 const { Content } = Layout
 const { Text, Title } = Typography
@@ -14,20 +17,116 @@ const SL = {
   accent: '#38BDF8', mint: '#4ADE80', text: '#F1F5F9', muted: '#64748B',
 }
 
+function personKey(person: FriendPerson): string {
+  return person.userId ?? person.email.toLowerCase()
+}
+
+function PlaylistShareSelect({
+  person,
+  lists,
+  onToggle,
+}: {
+  person: FriendPerson
+  lists: ShareListSummary[]
+  onToggle: (person: FriendPerson, listId: string, shared: boolean) => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const sharedCount = person.sharedListIds.length
+  const label = sharedCount === 0
+    ? 'No lists'
+    : `${sharedCount} list${sharedCount === 1 ? '' : 's'}`
+
+  return (
+    <Select
+      open={open}
+      onOpenChange={setOpen}
+      value={label}
+      size="middle"
+      style={{ width: '100%', minWidth: 180 }}
+      styles={{ popup: { root: { padding: 0 } } }}
+      popupRender={() => (
+        <div
+          style={{ minWidth: 260, padding: 0, margin: 0 }}
+          onMouseDown={event => event.preventDefault()}
+        >
+          {lists.length === 0 ? (
+            <div style={{ padding: '12px 14px' }}>
+              <Text style={{ color: SL.muted, fontSize: '13px' }}>Create a ShareList first.</Text>
+            </div>
+          ) : lists.map(list => {
+            const checked = person.sharedListIds.includes(list.id)
+            const busy = busyId === list.id
+            const toggle = async () => {
+              if (busy) return
+              setBusyId(list.id)
+              try {
+                await onToggle(person, list.id, !checked)
+              } finally {
+                setBusyId(null)
+              }
+            }
+            return (
+              <Flex
+                key={list.id}
+                align="center"
+                justify="space-between"
+                gap={12}
+                onClick={() => void toggle()}
+                style={{
+                  padding: '10px 14px',
+                  margin: 0,
+                  cursor: busy ? 'wait' : 'pointer',
+                  borderRadius: 0,
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+                onMouseEnter={event => { event.currentTarget.style.background = 'rgba(56, 189, 248, 0.08)' }}
+                onMouseLeave={event => { event.currentTarget.style.background = 'transparent' }}
+              >
+                <Text
+                  style={{
+                    color: SL.text,
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {list.name}
+                </Text>
+                <Switch
+                  size="small"
+                  checked={checked}
+                  loading={busy}
+                  style={{ pointerEvents: 'none' }}
+                />
+              </Flex>
+            )
+          })}
+        </div>
+      )}
+    />
+  )
+}
+
 export function Friends() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [notifyApi, contextHolder] = notification.useNotification()
   const activeTab = searchParams.get('tab') === 'my-friends' ? 'my-friends' : 'add'
 
   const [lists, setLists] = useState<ShareListSummary[]>([])
-  const [friends, setFriends] = useState<Friend[]>([])
-  const [pending, setPending] = useState<PendingInvite[]>([])
+  const [people, setPeople] = useState<FriendPerson[]>([])
   const [listsLoading, setListsLoading] = useState(true)
   const [friendsLoading, setFriendsLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [resendingId, setResendingId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [removingKey, setRemovingKey] = useState<string | null>(null)
   const [form] = Form.useForm()
+
+  const ownedLists = useMemo(() => lists.filter(list => !list.isShared), [lists])
 
   const loadFriends = async () => {
     setFriendsLoading(true)
@@ -37,8 +136,7 @@ export function Friends() {
       notifyApi.error({ message: 'Failed to load friends', description: result.error.message, placement: 'topRight' })
       return
     }
-    setFriends(result.data.friends)
-    setPending(result.data.pending)
+    setPeople(result.data.people ?? [])
   }
 
   useEffect(() => {
@@ -67,201 +165,257 @@ export function Friends() {
     }
   }
 
-  const handleResend = async (invite: PendingInvite) => {
-    setResendingId(invite.id)
-    try {
-      const result = await api.resendFriendInvite(invite.id)
-      if (api.isError(result)) {
-        notifyApi.error({ message: 'Resend failed', description: result.error.message, placement: 'topRight' })
-        return
-      }
-      notifyApi.success({ message: 'Invite resent', description: `We emailed ${invite.email} again.`, placement: 'topRight' })
-    } finally {
-      setResendingId(null)
-    }
+  const patchPersonLists = (target: FriendPerson, listId: string, shared: boolean) => {
+    setPeople(prev => prev.map(person => {
+      if (personKey(person) !== personKey(target)) return person
+      const sharedListIds = shared
+        ? (person.sharedListIds.includes(listId) ? person.sharedListIds : [...person.sharedListIds, listId])
+        : person.sharedListIds.filter(id => id !== listId)
+      return { ...person, sharedListIds }
+    }))
   }
 
-  const handleDeletePending = async (invite: PendingInvite) => {
-    setDeletingId(invite.id)
+  const handleToggleList = async (person: FriendPerson, listId: string, shared: boolean) => {
+    const payload = { sharelistId: listId, userId: person.userId, email: person.email }
+    const result = shared
+      ? await api.shareListWithFriend(payload)
+      : await api.unshareListWithFriend(payload)
+    if (api.isError(result)) {
+      notifyApi.error({
+        message: shared ? 'Could not share list' : 'Could not unshare list',
+        description: result.error.message,
+        placement: 'topRight',
+      })
+      return
+    }
+    patchPersonLists(person, listId, shared)
+  }
+
+  const handleRemove = async (person: FriendPerson) => {
+    const key = personKey(person)
+    setRemovingKey(key)
     try {
-      const result = await api.deleteFriendInvite(invite.id)
+      const result = await api.removeFriend({ userId: person.userId, email: person.email })
       if (api.isError(result)) {
-        notifyApi.error({ message: 'Delete failed', description: result.error.message, placement: 'topRight' })
+        notifyApi.error({ message: 'Could not remove friend', description: result.error.message, placement: 'topRight' })
         return
       }
-      notifyApi.success({ message: 'Invite deleted', placement: 'topRight' })
-      void loadFriends()
+      setPeople(prev => prev.filter(row => personKey(row) !== key))
+      notifyApi.success({ message: 'Friend removed', placement: 'topRight' })
     } finally {
-      setDeletingId(null)
+      setRemovingKey(null)
     }
   }
 
   const addFriendTab = (
     <div style={{ paddingTop: '8px' }}>
-      <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '20px', lineHeight: 1.6 }}>
-        Enter a friend’s email and pick a ShareList. We’ll send them an invite to manage it with you.
-      </Text>
-      <Form form={form} layout="vertical" onFinish={values => void handleInvite(values)} requiredMark={false}>
-        <Form.Item
-          name="email"
-          label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>Friend’s email</span>}
-          rules={[{ required: true, message: 'Enter an email' }, { type: 'email', message: 'Enter a valid email' }]}
-        >
-          <Input
-            prefix={<MailOutlined style={{ color: SL.muted }} />}
-            placeholder="friend@email.com"
+      <Card
+        style={{
+          background: 'rgba(28, 31, 33, 0.4)',
+          border: '1px solid rgba(56, 189, 248, 0.15)',
+          borderRadius: '16px',
+          backdropFilter: 'blur(20px)',
+        }}
+        styles={{ body: { padding: '32px' } }}
+      >
+        <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '20px', lineHeight: 1.6 }}>
+          Enter a friend’s email and pick a ShareList. We’ll send them an invite to manage it with you.
+        </Text>
+        <Form form={form} layout="vertical" onFinish={values => void handleInvite(values)} requiredMark={false}>
+          <Form.Item
+            name="email"
+            label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>Friend’s email</span>}
+            rules={[{ required: true, message: 'Enter an email' }, { type: 'email', message: 'Enter a valid email' }]}
+          >
+            <Input
+              prefix={<MailOutlined style={{ color: SL.muted }} />}
+              placeholder="friend@email.com"
+              size="large"
+              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: SL.text }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="sharelistId"
+            label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>ShareList to share</span>}
+            rules={[{ required: true, message: 'Select a ShareList' }]}
+          >
+            <Select
+              placeholder={listsLoading ? 'Loading lists…' : 'Choose a ShareList'}
+              size="large"
+              loading={listsLoading}
+              options={ownedLists.map(list => ({ value: list.id, label: list.name }))}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
             size="large"
-            style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: SL.text }}
-          />
-        </Form.Item>
-        <Form.Item
-          name="sharelistId"
-          label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>ShareList to share</span>}
-          rules={[{ required: true, message: 'Select a ShareList' }]}
-        >
-          <Select
-            placeholder={listsLoading ? 'Loading lists…' : 'Choose a ShareList'}
-            size="large"
-            loading={listsLoading}
-            options={lists.map(list => ({ value: list.id, label: list.name }))}
-            style={{ width: '100%' }}
-          />
-        </Form.Item>
-        <Button
-          type="primary"
-          htmlType="submit"
-          size="large"
-          block
-          loading={sending}
-          icon={<UserAddOutlined />}
-          disabled={lists.length === 0}
-          style={{
-            height: '48px',
-            borderRadius: '12px',
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-            border: 'none',
-            color: '#FFFFFF',
-          }}
-        >
-          <span style={{ color: '#FFFFFF' }}>Send invite</span>
-        </Button>
-        {!listsLoading && lists.length === 0 && (
-          <Text style={{ color: SL.muted, fontSize: '12px', display: 'block', marginTop: '12px' }}>
-            Create a ShareList first, then you can invite a friend.
-          </Text>
-        )}
-      </Form>
+            block
+            loading={sending}
+            icon={<UserAddOutlined />}
+            disabled={ownedLists.length === 0}
+            style={{
+              height: '48px',
+              borderRadius: '12px',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+            }}
+          >
+            <span style={{ color: '#FFFFFF' }}>Send invite</span>
+          </Button>
+          {!listsLoading && ownedLists.length === 0 && (
+            <Text style={{ color: SL.muted, fontSize: '12px', display: 'block', marginTop: '12px' }}>
+              Create a ShareList first, then you can invite a friend.
+            </Text>
+          )}
+        </Form>
+      </Card>
     </div>
   )
 
   const myFriendsTab = (
     <div style={{ paddingTop: '8px' }}>
-      {friendsLoading && (
-        <Flex vertical gap={12}>
-          {[1, 2, 3].map(i => (
-            <Skeleton.Input key={i} active style={{ width: '100%', height: '72px', borderRadius: '12px' }} />
-          ))}
-        </Flex>
-      )}
-      {!friendsLoading && friends.length === 0 && pending.length === 0 && (
-        <Empty
-          image={<Users style={{ width: '48px', height: '48px', color: SL.muted, opacity: 0.5 }} />}
-          description={
-            <Text style={{ color: SL.muted, fontSize: '13px' }}>
-              No friends yet. Send an invite from Add Friend.
-            </Text>
-          }
-        />
-      )}
-      {!friendsLoading && (pending.length > 0 || friends.length > 0) && (
-        <Flex vertical gap={12}>
-          {pending.map(invite => (
-            <Card
-              key={invite.id}
-              style={{
-                background: 'rgba(251, 191, 36, 0.06)',
-                border: '1px solid rgba(251, 191, 36, 0.28)',
-                borderRadius: '16px',
-              }}
-              styles={{ body: { padding: '16px' } }}
-            >
-              <Flex justify="space-between" align="flex-start" gap={8} style={{ marginBottom: '8px' }}>
-                <Text style={{ color: SL.text, fontSize: '15px', fontWeight: 600 }}>
-                  {invite.email}
+      <Card
+        style={{
+          background: 'rgba(28, 31, 33, 0.4)',
+          border: '1px solid rgba(56, 189, 248, 0.1)',
+          borderRadius: '16px',
+          backdropFilter: 'blur(20px)',
+          overflow: 'hidden',
+        }}
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(56, 189, 248, 0.1)', background: 'rgba(17, 19, 20, 0.4)' }}>
+          <Flex>
+            <div style={{ flex: '1 1 32%', paddingRight: '16px' }}>
+              <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>User</Text>
+            </div>
+            <div style={{ width: '110px', paddingRight: '16px' }}>
+              <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</Text>
+            </div>
+            <div style={{ flex: '1 1 38%', paddingRight: '16px' }}>
+              <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Playlists</Text>
+            </div>
+            <div style={{ width: '120px' }} />
+          </Flex>
+        </div>
+
+        {friendsLoading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <div key={`skeleton-${index}`} style={{ padding: '14px 20px', borderBottom: index < 3 ? '1px solid rgba(56, 189, 248, 0.05)' : 'none' }}>
+              <Skeleton.Input active style={{ width: '100%', height: '36px', borderRadius: '8px' }} />
+            </div>
+          ))
+        ) : people.length === 0 ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+            <Empty
+              image={<Users style={{ width: '48px', height: '48px', color: SL.muted, opacity: 0.5 }} />}
+              description={
+                <Text style={{ color: SL.muted, fontSize: '13px' }}>
+                  No friends yet. Send an invite from Add Friend.
                 </Text>
-                <Tag style={{
-                  margin: 0,
-                  background: 'rgba(251, 191, 36, 0.15)',
-                  border: '1px solid rgba(251, 191, 36, 0.35)',
-                  color: '#FBBF24',
-                  fontWeight: 700,
-                }}>
-                  Pending
-                </Tag>
-              </Flex>
-              <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '14px' }}>
-                {invite.sharelistName}
-              </Text>
-              <Flex gap={8} wrap="wrap">
-                <Button
-                  icon={<SendOutlined />}
-                  loading={resendingId === invite.id}
-                  onClick={() => void handleResend(invite)}
-                  style={{
-                    borderRadius: '10px',
-                    fontWeight: 600,
-                    color: SL.accent,
-                    borderColor: 'rgba(56, 189, 248, 0.35)',
-                    background: 'rgba(56, 189, 248, 0.08)',
-                  }}
-                >
-                  Resend invite
-                </Button>
-                <Button
-                  icon={<DeleteOutlined />}
-                  loading={deletingId === invite.id}
-                  onClick={() => void handleDeletePending(invite)}
-                  style={{
-                    borderRadius: '10px',
-                    fontWeight: 600,
-                    color: '#EF4444',
-                    borderColor: 'rgba(239, 68, 68, 0.35)',
-                    background: 'rgba(239, 68, 68, 0.08)',
-                  }}
-                >
-                  Delete
-                </Button>
-              </Flex>
-            </Card>
-          ))}
-          {friends.map(friend => (
-            <Card
-              key={friend.userId}
-              style={{
-                background: 'rgba(28, 31, 33, 0.5)',
-                border: '1px solid rgba(56, 189, 248, 0.12)',
-                borderRadius: '16px',
-              }}
-              styles={{ body: { padding: '16px' } }}
-            >
-              <Text style={{ color: SL.text, fontSize: '15px', fontWeight: 600, display: 'block' }}>
-                {friend.email || 'Unknown user'}
-              </Text>
-              <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginTop: '6px' }}>
-                {friend.lists.length === 0
-                  ? 'No lists shared'
-                  : friend.lists.map(l => l.name).join(' · ')}
-              </Text>
-            </Card>
-          ))}
-        </Flex>
-      )}
+              }
+            />
+          </div>
+        ) : (
+          people.map((person, index) => {
+            const initials = person.email.charAt(0).toUpperCase()
+            const isPending = person.status === 'pending'
+            return (
+              <div
+                key={personKey(person)}
+                style={{
+                  padding: '16px 20px',
+                  borderBottom: index < people.length - 1 ? '1px solid rgba(56, 189, 248, 0.05)' : 'none',
+                }}
+              >
+                <Flex align="center">
+                  <Flex align="center" gap={12} style={{ flex: '1 1 32%', paddingRight: '16px', minWidth: 0 }}>
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
+                    }}>
+                      {initials}
+                    </div>
+                    <Text style={{
+                      color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {person.email || 'Unknown user'}
+                    </Text>
+                  </Flex>
+
+                  <div style={{ width: '110px', paddingRight: '16px' }}>
+                    {isPending ? (
+                      <Tag style={{
+                        margin: 0,
+                        background: 'rgba(251, 191, 36, 0.15)',
+                        border: '1px solid rgba(251, 191, 36, 0.35)',
+                        color: '#FBBF24',
+                        fontWeight: 700,
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                      }}>
+                        Pending
+                      </Tag>
+                    ) : (
+                      <Text style={{ color: '#94A3B8', fontSize: '13px' }}>Active</Text>
+                    )}
+                  </div>
+
+                  <div style={{ flex: '1 1 38%', paddingRight: '16px', minWidth: 0 }}>
+                    <PlaylistShareSelect
+                      person={person}
+                      lists={ownedLists}
+                      onToggle={handleToggleList}
+                    />
+                  </div>
+
+                  <div style={{ width: '120px' }}>
+                    <Popconfirm
+                      title="Remove this friend?"
+                      description="They will lose access to every list you shared."
+                      okText="Remove"
+                      cancelText="Cancel"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => void handleRemove(person)}
+                    >
+                      <Button
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        loading={removingKey === personKey(person)}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#EF4444',
+                          borderRadius: '8px',
+                          height: '32px',
+                          padding: '0 12px',
+                          fontWeight: 600,
+                          fontSize: '13px',
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                </Flex>
+              </div>
+            )
+          })
+        )}
+      </Card>
     </div>
   )
 
   return (
-    <Content style={{ maxWidth: '480px', margin: '0 auto', padding: '24px 20px 100px', width: '100%' }}>
+    <Content style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 20px 100px', width: '100%' }}>
       {contextHolder}
       <Title level={1} style={{ color: SL.text, margin: '0 0 20px', fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px' }}>
         Friends

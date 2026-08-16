@@ -379,6 +379,14 @@ export interface PendingInvite {
 export interface FriendsOverview {
   friends: Friend[]
   pending: PendingInvite[]
+  people: FriendPerson[]
+}
+
+export interface FriendPerson {
+  userId: string | null
+  email: string
+  status: 'pending' | 'active'
+  sharedListIds: string[]
 }
 
 export interface InvitePreview {
@@ -418,6 +426,49 @@ export function acceptFriendInvite(
 ): Promise<ApiResult<{ accepted: boolean; sharelistId: string }>> {
   return request<{ accepted: boolean; sharelistId: string }>(`/friends/invites/${token}/accept`, {
     method: 'POST',
+  })
+}
+
+export function shareListWithFriend(data: {
+  sharelistId: string
+  userId?: string | null
+  email: string
+}): Promise<ApiResult<{ shared: boolean; invited?: boolean }>> {
+  return request<{ shared: boolean; invited?: boolean }>('/friends/share', {
+    method: 'POST',
+    body: JSON.stringify({
+      sharelistId: data.sharelistId,
+      email: data.email,
+      ...(data.userId ? { userId: data.userId } : {}),
+    }),
+  })
+}
+
+export function unshareListWithFriend(data: {
+  sharelistId: string
+  userId?: string | null
+  email: string
+}): Promise<ApiResult<{ unshared: boolean }>> {
+  return request<{ unshared: boolean }>('/friends/unshare', {
+    method: 'POST',
+    body: JSON.stringify({
+      sharelistId: data.sharelistId,
+      email: data.email,
+      ...(data.userId ? { userId: data.userId } : {}),
+    }),
+  })
+}
+
+export function removeFriend(data: {
+  userId?: string | null
+  email: string
+}): Promise<ApiResult<{ removed: boolean }>> {
+  return request<{ removed: boolean }>('/friends/remove', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: data.email,
+      ...(data.userId ? { userId: data.userId } : {}),
+    }),
   })
 }
 

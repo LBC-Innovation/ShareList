@@ -1,7 +1,10 @@
 /**
  * Friends / ShareList invite routes.
  *
- *   GET    /friends                         — friends grouped with shared lists
+ *   GET    /friends                         — people (active + pending) and owned-list shares
+ *   POST   /friends/share                   — share a list (collaborator or email invite)
+ *   POST   /friends/unshare                 — unshare a list
+ *   POST   /friends/remove                  — remove friend / pending invites
  *   POST   /friends/invites                 — send an invite email
  *   POST   /friends/invites/:id/resend      — resend a pending invite
  *   DELETE /friends/invites/:id             — delete a pending invite
@@ -43,6 +46,58 @@ async function getUserEmail(userId: string): Promise<string> {
   const { data, error } = await supabaseAuth.auth.admin.getUserById(userId)
   if (error || !data.user?.email) return ''
   return data.user.email
+}
+
+async function getOwnedSharelist(userId: string, sharelistId: string) {
+  const list = await getAccessibleSharelist(userId, sharelistId)
+  if (!list || list.owner_id !== userId) return null
+  return list
+}
+
+async function createAndSendInvite(opts: {
+  inviterId: string
+  inviterEmail: string
+  inviteeEmail: string
+  sharelistId: string
+  sharelistName: string
+}): Promise<{ sent: true } | { error: string; status: number }> {
+  const { inviterId, inviterEmail, inviteeEmail, sharelistId, sharelistName } = opts
+
+  const { data: existingPending, error: pendingErr } = await supabaseAdmin
+    .from('sharelist_invites')
+    .select('id')
+    .eq('sharelist_id', sharelistId)
+    .eq('invitee_email', inviteeEmail)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (pendingErr) throw new Error(pendingErr.message)
+  if (existingPending) {
+    return { error: 'An invite is already pending for this email', status: 409 }
+  }
+
+  const token = randomBytes(32).toString('hex')
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { error: insertErr } = await supabaseAdmin.from('sharelist_invites').insert({
+    sharelist_id: sharelistId,
+    inviter_id: inviterId,
+    invitee_email: inviteeEmail,
+    token,
+    status: 'pending',
+    expires_at: expiresAt,
+  })
+
+  if (insertErr) throw new Error(insertErr.message)
+
+  await sendShareInviteEmail({
+    to: inviteeEmail,
+    inviterEmail,
+    sharelistName,
+    acceptUrl: `${clientOrigin()}/invite/${token}`,
+  })
+
+  return { sent: true }
 }
 
 
@@ -150,10 +205,239 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       sharelistName: pendingListNames.get(row.sharelist_id as string) ?? 'ShareList',
     }))
 
-    res.json({ data: { friends, pending }, error: null })
+    const ownedIdSet = new Set(ownedIds)
+    const peopleByEmail = new Map<string, {
+      userId: string | null
+      email: string
+      status: 'pending' | 'active'
+      sharedListIds: string[]
+    }>()
+
+    for (const friend of friends) {
+      const email = friend.email.toLowerCase()
+      const sharedListIds = friend.lists
+        .map(l => l.id)
+        .filter(id => ownedIdSet.has(id))
+      peopleByEmail.set(email, {
+        userId: friend.userId,
+        email: friend.email,
+        status: 'active',
+        sharedListIds,
+      })
+    }
+
+    for (const invite of pending) {
+      const email = invite.email.toLowerCase()
+      const existing = peopleByEmail.get(email)
+      if (existing) {
+        if (!existing.sharedListIds.includes(invite.sharelistId)) {
+          existing.sharedListIds.push(invite.sharelistId)
+        }
+        continue
+      }
+      peopleByEmail.set(email, {
+        userId: null,
+        email: invite.email,
+        status: 'pending',
+        sharedListIds: [invite.sharelistId],
+      })
+    }
+
+    const people = [...peopleByEmail.values()].sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'pending' ? -1 : 1
+      return a.email.localeCompare(b.email)
+    })
+
+    res.json({ data: { friends, pending, people }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'GET /friends failed', { userId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
+function parseFriendTarget(body: { userId?: string; email?: string }): { userId?: string; email?: string } | null {
+  const userId = body.userId?.trim() || undefined
+  const email = body.email?.trim().toLowerCase() || undefined
+  if (!userId && !email) return null
+  return { userId, email }
+}
+
+// ── POST /friends/share ───────────────────────────────────────────────────────
+
+router.post('/share', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const inviterEmail = req.user!.email
+  const { sharelistId } = req.body as { sharelistId?: string }
+  const target = parseFriendTarget(req.body as { userId?: string; email?: string })
+
+  if (!sharelistId || !target) {
+    res.status(400).json({ data: null, error: { message: 'sharelistId and userId or email are required' } })
+    return
+  }
+
+  try {
+    const list = await getOwnedSharelist(userId, sharelistId)
+    if (!list) {
+      res.status(404).json({ data: null, error: { message: 'ShareList not found' } })
+      return
+    }
+
+    if (target.userId) {
+      if (target.userId === userId) {
+        res.status(400).json({ data: null, error: { message: 'You cannot share a list with yourself' } })
+        return
+      }
+      const { error: collabErr } = await supabaseAdmin.from('sharelist_collaborators').upsert(
+        {
+          sharelist_id: sharelistId,
+          user_id: target.userId,
+          invited_by: userId,
+        },
+        { onConflict: 'sharelist_id,user_id' },
+      )
+      if (collabErr) throw new Error(collabErr.message)
+      log('info', 'ShareList shared with friend', { sharelistId, userId, friendId: target.userId })
+      res.json({ data: { shared: true }, error: null })
+      return
+    }
+
+    const inviteeEmail = target.email!
+    if (inviteeEmail === inviterEmail.trim().toLowerCase()) {
+      res.status(400).json({ data: null, error: { message: 'You cannot share a list with yourself' } })
+      return
+    }
+
+    const sent = await createAndSendInvite({
+      inviterId: userId,
+      inviterEmail,
+      inviteeEmail,
+      sharelistId,
+      sharelistName: list.name,
+    })
+    if ('error' in sent) {
+      res.status(sent.status).json({ data: null, error: { message: sent.error } })
+      return
+    }
+
+    log('info', 'ShareList invite sent', { sharelistId, userId, inviteeEmail })
+    res.status(201).json({ data: { shared: true, invited: true }, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'POST /friends/share failed', { userId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
+// ── POST /friends/unshare ─────────────────────────────────────────────────────
+
+router.post('/unshare', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const { sharelistId } = req.body as { sharelistId?: string }
+  const target = parseFriendTarget(req.body as { userId?: string; email?: string })
+
+  if (!sharelistId || !target) {
+    res.status(400).json({ data: null, error: { message: 'sharelistId and userId or email are required' } })
+    return
+  }
+
+  try {
+    const list = await getOwnedSharelist(userId, sharelistId)
+    if (!list) {
+      res.status(404).json({ data: null, error: { message: 'ShareList not found' } })
+      return
+    }
+
+    if (target.userId) {
+      const { error: collabErr } = await supabaseAdmin
+        .from('sharelist_collaborators')
+        .delete()
+        .eq('sharelist_id', sharelistId)
+        .eq('user_id', target.userId)
+      if (collabErr) throw new Error(collabErr.message)
+    }
+
+    if (target.email) {
+      const { error: inviteErr } = await supabaseAdmin
+        .from('sharelist_invites')
+        .delete()
+        .eq('sharelist_id', sharelistId)
+        .eq('inviter_id', userId)
+        .eq('invitee_email', target.email)
+        .eq('status', 'pending')
+      if (inviteErr) throw new Error(inviteErr.message)
+    }
+
+    log('info', 'ShareList unshared', { sharelistId, userId, friendId: target.userId, email: target.email })
+    res.json({ data: { unshared: true }, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'POST /friends/unshare failed', { userId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
+// ── POST /friends/remove ──────────────────────────────────────────────────────
+
+router.post('/remove', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const target = parseFriendTarget(req.body as { userId?: string; email?: string })
+
+  if (!target) {
+    res.status(400).json({ data: null, error: { message: 'userId or email is required' } })
+    return
+  }
+
+  try {
+    const email = target.email
+      ?? (target.userId ? (await getUserEmail(target.userId)).toLowerCase() : '')
+
+    const { data: owned, error: ownedErr } = await supabaseAdmin
+      .from('sharelists')
+      .select('id')
+      .eq('owner_id', userId)
+    if (ownedErr) throw new Error(ownedErr.message)
+    const ownedIds = (owned ?? []).map(l => l.id as string)
+
+    if (target.userId && ownedIds.length > 0) {
+      const { error: collabErr } = await supabaseAdmin
+        .from('sharelist_collaborators')
+        .delete()
+        .eq('user_id', target.userId)
+        .in('sharelist_id', ownedIds)
+      if (collabErr) throw new Error(collabErr.message)
+
+      const { data: theirLists, error: theirErr } = await supabaseAdmin
+        .from('sharelists')
+        .select('id')
+        .eq('owner_id', target.userId)
+      if (theirErr) throw new Error(theirErr.message)
+      const theirIds = (theirLists ?? []).map(l => l.id as string)
+      if (theirIds.length > 0) {
+        const { error: leaveErr } = await supabaseAdmin
+          .from('sharelist_collaborators')
+          .delete()
+          .eq('user_id', userId)
+          .in('sharelist_id', theirIds)
+        if (leaveErr) throw new Error(leaveErr.message)
+      }
+    }
+
+    if (email) {
+      const { error: inviteErr } = await supabaseAdmin
+        .from('sharelist_invites')
+        .delete()
+        .eq('inviter_id', userId)
+        .eq('invitee_email', email)
+        .eq('status', 'pending')
+      if (inviteErr) throw new Error(inviteErr.message)
+    }
+
+    log('info', 'Friend removed', { userId, friendId: target.userId, email })
+    res.json({ data: { removed: true }, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'POST /friends/remove failed', { userId, error: message })
     res.status(500).json({ data: null, error: { message } })
   }
 })
@@ -182,47 +466,23 @@ router.post('/invites', requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const list = await getAccessibleSharelist(userId, sharelistId)
+    const list = await getOwnedSharelist(userId, sharelistId)
     if (!list) {
       res.status(404).json({ data: null, error: { message: 'ShareList not found' } })
       return
     }
 
-    const { data: existingPending, error: pendingErr } = await supabaseAdmin
-      .from('sharelist_invites')
-      .select('id')
-      .eq('sharelist_id', sharelistId)
-      .eq('invitee_email', inviteeEmail)
-      .eq('status', 'pending')
-      .maybeSingle()
-
-    if (pendingErr) throw new Error(pendingErr.message)
-    if (existingPending) {
-      res.status(409).json({ data: null, error: { message: 'An invite is already pending for this email' } })
+    const sent = await createAndSendInvite({
+      inviterId: userId,
+      inviterEmail,
+      inviteeEmail,
+      sharelistId,
+      sharelistName: list.name,
+    })
+    if ('error' in sent) {
+      res.status(sent.status).json({ data: null, error: { message: sent.error } })
       return
     }
-
-    const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-
-    const { error: insertErr } = await supabaseAdmin.from('sharelist_invites').insert({
-      sharelist_id: sharelistId,
-      inviter_id: userId,
-      invitee_email: inviteeEmail,
-      token,
-      status: 'pending',
-      expires_at: expiresAt,
-    })
-
-    if (insertErr) throw new Error(insertErr.message)
-
-    const acceptUrl = `${clientOrigin()}/invite/${token}`
-    await sendShareInviteEmail({
-      to: inviteeEmail,
-      inviterEmail,
-      sharelistName: list.name,
-      acceptUrl,
-    })
 
     log('info', 'ShareList invite sent', { sharelistId, userId, inviteeEmail })
     res.status(201).json({ data: { sent: true }, error: null })
