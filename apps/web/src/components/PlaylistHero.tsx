@@ -1,7 +1,9 @@
-import { Card, Flex, Grid, Skeleton } from 'antd'
-import { LinkOutlined } from '@ant-design/icons'
+import { useState } from 'react'
+import { Card, Flex, Skeleton } from 'antd'
+import { ChevronDown, ChevronLeft } from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
+import { UserAvatar } from './UserAvatar'
 
 const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; color: string }> = {
   spotify:     { label: 'Spotify',     icon: faSpotify, color: '#1DB954' },
@@ -12,13 +14,16 @@ interface HeroLink {
   provider: string
   playlistName: string
   imageUrl: string | null
+  contributor?: {
+    displayName: string
+    avatarUrl: string | null
+  }
 }
 
 interface PlaylistHeroProps {
   name: string
   trackCount: number
   links: HeroLink[]
-  onManageList: () => void
   isLoading?: boolean
 }
 
@@ -26,51 +31,107 @@ function formatTrackCount(n: number): string {
   return `${n} ${n === 1 ? 'song' : 'songs'}`
 }
 
-function ContributingPlaylists({ links }: { links: HeroLink[] }) {
+function ContributingAccordion({ links }: { links: HeroLink[] }) {
+  const [open, setOpen] = useState(false)
+
   return (
-    <Flex gap={8} wrap="wrap" style={{ width: '100%' }}>
-      {links.map(link => {
-        const meta = PROVIDER_META[link.provider]
-        if (!meta) return null
-        return (
-          <Flex
-            key={`${link.provider}-${link.playlistName}`}
-            align="center"
-            gap={6}
-            style={{
-              background: 'rgba(28, 31, 33, 0.8)',
-              border: '1px solid rgba(56, 189, 248, 0.18)',
-              borderRadius: '20px',
-              padding: '4px 10px 4px 4px',
-              maxWidth: '100%',
-              width: 'fit-content',
-              boxSizing: 'border-box',
-            }}
-          >
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <FontAwesomeIcon icon={meta.icon} style={{ color: 'white', fontSize: '11px' }} />
-            </div>
-            <span style={{
-              color: '#F1F5F9',
-              fontSize: '11px',
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-              {link.playlistName}
-            </span>
-          </Flex>
-        )
-      })}
-    </Flex>
+    <div style={{ width: '100%', borderTop: '1px solid #2A2D30', paddingTop: 12 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(current => !current)}
+        aria-expanded={open}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '4px 0',
+        }}
+      >
+        <span style={{
+          color: '#F1F5F9',
+          fontSize: 13,
+          fontWeight: 600,
+        }}>
+          Contributing Playlists
+        </span>
+        {open
+          ? <ChevronDown size={18} strokeWidth={2.75} color="#F1F5F9" />
+          : <ChevronLeft size={18} strokeWidth={2.75} color="#F1F5F9" />}
+      </button>
+
+      {open && (
+        <Flex vertical style={{ width: '100%', marginTop: 8 }}>
+          {links.map((link, index) => {
+            const meta = PROVIDER_META[link.provider]
+            if (!meta) return null
+            return (
+              <Flex
+                key={`${link.provider}-${link.playlistName}`}
+                align="center"
+                gap={10}
+                style={{
+                  width: '100%',
+                  padding: '10px 4px',
+                  borderTop: index === 0 ? 'none' : '1px solid rgba(42, 45, 48, 0.8)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {link.contributor && (
+                  <UserAvatar
+                    src={link.contributor.avatarUrl}
+                    name={link.contributor.displayName}
+                    size={28}
+                    title={link.contributor.displayName}
+                    style={{
+                      backgroundColor: 'rgba(56,189,248,0.18)',
+                      color: '#38BDF8',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: '1px solid rgba(56,189,248,0.25)',
+                    }}
+                  />
+                )}
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: meta.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <FontAwesomeIcon icon={meta.icon} style={{ color: 'white', fontSize: '15px' }} />
+                </div>
+                <span style={{
+                  color: '#F1F5F9',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                  flex: 1,
+                }}>
+                  {link.playlistName}
+                </span>
+              </Flex>
+            )
+          })}
+        </Flex>
+      )}
+    </div>
   )
 }
 
-export function PlaylistHero({ name, trackCount, links, onManageList, isLoading = false }: PlaylistHeroProps) {
-  const screens = Grid.useBreakpoint()
-  const isCompact = !screens.md
+export function PlaylistHero({ name, trackCount, links, isLoading = false }: PlaylistHeroProps) {
   const images = links.map(l => l.imageUrl).filter((u): u is string => !!u).slice(0, 4)
+  const hasContributing = links.length > 0
 
   return (
     <Card
@@ -84,7 +145,7 @@ export function PlaylistHero({ name, trackCount, links, onManageList, isLoading 
       }}
       styles={{ body: { padding: '20px' } }}
     >
-      <Flex gap={16} style={{ marginBottom: isCompact && (isLoading || links.length > 0) ? '12px' : '20px' }}>
+      <Flex gap={16} style={{ marginBottom: isLoading || hasContributing ? '16px' : 0 }}>
         {/* Mosaic cover */}
         {isLoading ? (
           <Skeleton.Avatar
@@ -127,47 +188,26 @@ export function PlaylistHero({ name, trackCount, links, onManageList, isLoading 
           {isLoading ? (
             <>
               <Skeleton.Input active size="small" style={{ width: '70%', height: '28px', marginBottom: '8px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-              <Skeleton.Input active size="small" style={{ width: '50%', height: '16px', marginBottom: isCompact ? 0 : '12px', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px' }} />
-              {!isCompact && (
-                <Flex gap={8}>
-                  <Skeleton.Button active size="small" style={{ width: '110px', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
-                </Flex>
-              )}
+              <Skeleton.Input active size="small" style={{ width: '50%', height: '16px', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px' }} />
             </>
           ) : (
             <>
               <h1 style={{ color: '#F1F5F9', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: '1.2', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {name}
               </h1>
-              <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 400, lineHeight: '1.4', margin: isCompact ? 0 : '0 0 12px 0' }}>
+              <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 400, lineHeight: '1.4', margin: 0 }}>
                 {formatTrackCount(trackCount)}
               </p>
-              {!isCompact && <ContributingPlaylists links={links} />}
             </>
           )}
         </div>
       </Flex>
 
-      {isCompact && (isLoading || links.length > 0) && (
-        <div style={{ marginBottom: '20px' }}>
-          {isLoading ? (
-            <Skeleton.Button active size="small" style={{ width: '140px', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
-          ) : (
-            <ContributingPlaylists links={links} />
-          )}
-        </div>
+      {isLoading ? (
+        <Skeleton.Input active size="small" style={{ width: '180px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+      ) : (
+        hasContributing && <ContributingAccordion links={links} />
       )}
-
-      {/* Action buttons */}
-      <Flex justify="center" align="center" gap={24} style={{ paddingTop: '16px', borderTop: '1px solid #2A2D30' }}>
-        <button
-          onClick={onManageList}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
-        >
-          <LinkOutlined style={{ fontSize: '20px', color: '#38BDF8' }} />
-          <span style={{ color: '#38BDF8', fontSize: '12px', fontWeight: 600 }}>Manage List</span>
-        </button>
-      </Flex>
     </Card>
   )
 }
