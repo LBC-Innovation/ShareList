@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Button, Flex, Skeleton } from 'antd'
+import { Button, Flex, Grid, Skeleton } from 'antd'
 import { SyncOutlined, SwapOutlined } from '@ant-design/icons'
 
 interface SyncStatusBarProps {
@@ -32,30 +32,54 @@ const actionButtonStyle: CSSProperties = {
   width: '100%',
 }
 
-const equalActionGroupStyle: CSSProperties = {
-  display: 'inline-grid',
-  gridAutoFlow: 'column',
-  gridAutoColumns: '1fr',
-  gap: 8,
-  flexShrink: 0,
-}
-
 export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing = false, lastSynced, onSync, onCrossSync }: SyncStatusBarProps) {
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
+  const actionGroupStyle: CSSProperties = isCompact
+    ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }
+    : { display: 'inline-grid', gridAutoFlow: 'column', gridAutoColumns: '1fr', gap: 8, flexShrink: 0 }
+
+  const lastFetched = lastSynced && (
+    <span style={{
+      color: '#64748B',
+      fontSize: '12px',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+      textAlign: isCompact ? 'center' : undefined,
+      width: isCompact ? '100%' : undefined,
+    }}>
+      Last Fetched{' '}
+      <span style={{ color: '#94A3B8', fontWeight: 500 }}>{formatLastSynced(lastSynced)}</span>
+    </span>
+  )
+
   if (isLoading) {
     return (
-      <Flex justify="space-between" align="center" gap={12} wrap="wrap" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-        <div style={equalActionGroupStyle}>
-          <Skeleton.Button active size="small" style={{ width: '110px', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
-          <Skeleton.Button active size="small" style={{ width: '110px', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+      <Flex
+        vertical={isCompact}
+        justify={isCompact ? 'center' : 'space-between'}
+        align={isCompact ? 'stretch' : 'center'}
+        gap={isCompact ? 8 : 12}
+        style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}
+      >
+        <div style={actionGroupStyle}>
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
         </div>
-        <Skeleton.Input active size="small" style={{ width: '120px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px', flexShrink: 0 }} />
+        <Skeleton.Input active size="small" style={{ width: '120px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px', alignSelf: isCompact ? 'center' : undefined }} />
       </Flex>
     )
   }
 
   return (
-    <Flex justify="space-between" align="center" gap={12} wrap="wrap" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-      <div style={equalActionGroupStyle}>
+    <Flex
+      vertical={isCompact}
+      justify={isCompact ? 'center' : 'space-between'}
+      align={isCompact ? 'stretch' : 'center'}
+      gap={isCompact ? 8 : 12}
+      style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}
+    >
+      <div style={actionGroupStyle}>
         <Button
           size="small"
           loading={crossSyncing}
@@ -83,18 +107,7 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
           Fetch Songs
         </Button>
       </div>
-      {lastSynced && (
-        <span style={{
-          color: '#64748B',
-          fontSize: '12px',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          marginLeft: 'auto',
-        }}>
-          Last Fetched{' '}
-          <span style={{ color: '#94A3B8', fontWeight: 500 }}>{formatLastSynced(lastSynced)}</span>
-        </span>
-      )}
+      {lastFetched}
     </Flex>
   )
 }
