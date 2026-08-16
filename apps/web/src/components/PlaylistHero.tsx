@@ -1,4 +1,4 @@
-import { Card, Flex, Skeleton } from 'antd'
+import { Card, Flex, Grid, Skeleton } from 'antd'
 import { LinkOutlined } from '@ant-design/icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
@@ -26,7 +26,49 @@ function formatTrackCount(n: number): string {
   return `${n} ${n === 1 ? 'song' : 'songs'}`
 }
 
+function ContributingPlaylists({ links, fullWidth }: { links: HeroLink[]; fullWidth: boolean }) {
+  return (
+    <Flex gap={8} wrap="wrap" style={{ width: fullWidth ? '100%' : undefined }}>
+      {links.map(link => {
+        const meta = PROVIDER_META[link.provider]
+        if (!meta) return null
+        return (
+          <Flex
+            key={`${link.provider}-${link.playlistName}`}
+            align="center"
+            gap={6}
+            style={{
+              background: 'rgba(28, 31, 33, 0.8)',
+              borderRadius: '20px',
+              padding: '4px 10px 4px 4px',
+              minWidth: 0,
+              ...(fullWidth ? { flex: '1 1 100%', maxWidth: '100%' } : {}),
+            }}
+          >
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FontAwesomeIcon icon={meta.icon} style={{ color: 'white', fontSize: '11px' }} />
+            </div>
+            <span style={{
+              color: '#F1F5F9',
+              fontSize: '11px',
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+            }}>
+              {link.playlistName}
+            </span>
+          </Flex>
+        )
+      })}
+    </Flex>
+  )
+}
+
 export function PlaylistHero({ name, trackCount, links, onManageList, isLoading = false }: PlaylistHeroProps) {
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
   const images = links.map(l => l.imageUrl).filter((u): u is string => !!u).slice(0, 4)
 
   return (
@@ -41,7 +83,7 @@ export function PlaylistHero({ name, trackCount, links, onManageList, isLoading 
       }}
       styles={{ body: { padding: '20px' } }}
     >
-      <Flex gap={16} style={{ marginBottom: '20px' }}>
+      <Flex gap={16} style={{ marginBottom: isCompact && (isLoading || links.length > 0) ? '12px' : '20px' }}>
         {/* Mosaic cover */}
         {isLoading ? (
           <Skeleton.Avatar
@@ -84,46 +126,36 @@ export function PlaylistHero({ name, trackCount, links, onManageList, isLoading 
           {isLoading ? (
             <>
               <Skeleton.Input active size="small" style={{ width: '70%', height: '28px', marginBottom: '8px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-              <Skeleton.Input active size="small" style={{ width: '50%', height: '16px', marginBottom: '12px', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px' }} />
-              <Flex gap={8}>
-                <Skeleton.Button active size="small" style={{ width: '110px', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
-              </Flex>
+              <Skeleton.Input active size="small" style={{ width: '50%', height: '16px', marginBottom: isCompact ? 0 : '12px', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px' }} />
+              {!isCompact && (
+                <Flex gap={8}>
+                  <Skeleton.Button active size="small" style={{ width: '110px', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
+                </Flex>
+              )}
             </>
           ) : (
             <>
               <h1 style={{ color: '#F1F5F9', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: '1.2', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {name}
               </h1>
-              <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 400, lineHeight: '1.4', margin: '0 0 12px 0' }}>
+              <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 400, lineHeight: '1.4', margin: isCompact ? 0 : '0 0 12px 0' }}>
                 {formatTrackCount(trackCount)}
               </p>
-              <Flex gap={8} wrap="wrap">
-                {links.map(link => {
-                  const meta = PROVIDER_META[link.provider]
-                  if (!meta) return null
-                  return (
-                    <Flex
-                      key={link.provider}
-                      align="center"
-                      gap={6}
-                      style={{
-                        background: 'rgba(28, 31, 33, 0.8)',
-                        borderRadius: '20px',
-                        padding: '4px 10px 4px 4px',
-                      }}
-                    >
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <FontAwesomeIcon icon={meta.icon} style={{ color: 'white', fontSize: '11px' }} />
-                      </div>
-                      <span style={{ color: '#F1F5F9', fontSize: '11px', fontWeight: 600 }}>{link.playlistName}</span>
-                    </Flex>
-                  )
-                })}
-              </Flex>
+              {!isCompact && <ContributingPlaylists links={links} fullWidth={false} />}
             </>
           )}
         </div>
       </Flex>
+
+      {isCompact && (isLoading || links.length > 0) && (
+        <div style={{ marginBottom: '20px' }}>
+          {isLoading ? (
+            <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
+          ) : (
+            <ContributingPlaylists links={links} fullWidth />
+          )}
+        </div>
+      )}
 
       {/* Action buttons */}
       <Flex justify="center" align="center" gap={24} style={{ paddingTop: '16px', borderTop: '1px solid #2A2D30' }}>
