@@ -16,9 +16,9 @@
 
 import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
-import { clientOrigin } from '../lib/origins'
+import { clientOrigins, resolveReturnOrigin, resolveSpotifyRedirectUri } from '../lib/origins'
 import { getProvider, listProviders } from '../streaming/registry'
-import { getConnectedProviders } from '../streaming/oauthHelpers'
+import { getConnectedProviders, verifyState } from '../streaming/oauthHelpers'
 
 // Side-effect imports — register all providers with the registry
 import '../streaming/spotify'
@@ -60,7 +60,11 @@ router.get('/:provider/auth-url', requireAuth, async (req: Request, res: Respons
   const { provider } = req.params as { provider: string }
   try {
     const p = getProvider(provider)
-    const url = await p.getAuthUrl(req.user!.id)
+    const requestedOrigin = typeof req.query['returnOrigin'] === 'string' ? req.query['returnOrigin'] : undefined
+    const returnOrigin = resolveReturnOrigin(req, requestedOrigin)
+    const redirectUri = provider === 'spotify' ? resolveSpotifyRedirectUri(req) : undefined
+    log('info', 'getAuthUrl', { provider, returnOrigin, redirectUri })
+    const url = await p.getAuthUrl(req.user!.id, { returnOrigin, redirectUri })
     res.json({ data: { url }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -79,28 +83,37 @@ router.get('/:provider/auth-url', requireAuth, async (req: Request, res: Respons
 router.get('/:provider/callback', async (req: Request, res: Response) => {
   const { provider } = req.params as { provider: string }
   const { code, state, error: oauthError } = req.query as Record<string, string | undefined>
+  const frontend = (parsedState?: { returnOrigin?: string }) =>
+    parsedState?.returnOrigin && clientOrigins().includes(parsedState.returnOrigin)
+      ? parsedState.returnOrigin
+      : resolveReturnOrigin(req)
 
   // Provider denied access
   if (oauthError) {
     log('warn', 'OAuth provider returned error', { provider, oauthError })
-    res.redirect(`${clientOrigin()}/settings/streaming?error=${encodeURIComponent(oauthError)}&provider=${provider}`)
+    res.redirect(`${frontend()}/settings/streaming?error=${encodeURIComponent(oauthError)}&provider=${provider}`)
     return
   }
 
   if (!code || !state) {
-    res.redirect(`${clientOrigin()}/settings/streaming?error=missing_params&provider=${provider}`)
+    res.redirect(`${frontend()}/settings/streaming?error=missing_params&provider=${provider}`)
     return
   }
 
   try {
+    const oauthState = verifyState(state)
     const p = getProvider(provider)
     await p.handleCallback(code, state)
-    log('info', 'OAuth callback success', { provider })
-    res.redirect(`${clientOrigin()}/settings/streaming?connected=${provider}`)
+    log('info', 'OAuth callback success', { provider, returnOrigin: frontend(oauthState) })
+    res.redirect(`${frontend(oauthState)}/settings/streaming?connected=${provider}`)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'OAuth callback failed', { provider, error: message })
-    res.redirect(`${clientOrigin()}/settings/streaming?error=${encodeURIComponent(message)}&provider=${provider}`)
+    let returnTo = frontend()
+    if (state) {
+      try { returnTo = frontend(verifyState(state)) } catch { /* keep fallback */ }
+    }
+    res.redirect(`${returnTo}/settings/streaming?error=${encodeURIComponent(message)}&provider=${provider}`)
   }
 })
 

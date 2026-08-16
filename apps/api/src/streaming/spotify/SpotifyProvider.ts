@@ -128,8 +128,15 @@ export class SpotifyProvider implements StreamingProvider {
 
   // ── OAuth ──────────────────────────────────────────────────────────────────
 
-  async getAuthUrl(userId: string): Promise<string> {
-    const state = generateState(userId)
+  async getAuthUrl(
+    userId: string,
+    context: { returnOrigin?: string; redirectUri?: string } = {},
+  ): Promise<string> {
+    const callbackUri = context.redirectUri ?? redirectUri()
+    const state = generateState(userId, {
+      returnOrigin: context.returnOrigin,
+      redirectUri: callbackUri,
+    })
     const scopes = [
       'playlist-read-private',
       'playlist-read-collaborative',
@@ -140,7 +147,7 @@ export class SpotifyProvider implements StreamingProvider {
     const params = new URLSearchParams({
       client_id: clientId(),
       response_type: 'code',
-      redirect_uri: redirectUri(),
+      redirect_uri: callbackUri,
       scope: scopes,
       state,
       show_dialog: 'true',
@@ -150,10 +157,10 @@ export class SpotifyProvider implements StreamingProvider {
   }
 
   async handleCallback(code: string, state: string): Promise<{ providerUserId: string }> {
-    const userId = verifyState(state)
+    const { userId, redirectUri: callbackUri } = verifyState(state)
 
-    // Exchange code for tokens
-    const tokenRes = await this._exchangeCode(code)
+    // Exchange code for tokens — redirect_uri must match the authorize request
+    const tokenRes = await this._exchangeCode(code, callbackUri ?? redirectUri())
 
     // Log the scopes Spotify actually granted — useful for diagnosing 403s
     console.log(JSON.stringify({
@@ -429,11 +436,11 @@ export class SpotifyProvider implements StreamingProvider {
     }
   }
 
-  private async _exchangeCode(code: string): Promise<SpotifyTokenResponse> {
+  private async _exchangeCode(code: string, callbackUri: string): Promise<SpotifyTokenResponse> {
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: redirectUri(),
+      redirect_uri: callbackUri,
     })
 
     const res = await fetch('https://accounts.spotify.com/api/token', {

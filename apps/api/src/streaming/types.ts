@@ -41,7 +41,7 @@ export interface StreamingProvider {
    *   `{ url: 'apple-music://authorize', state, developerToken }` so the
    *   frontend can detect the special case and run MusicKit JS instead.
    */
-  getAuthUrl(userId: string): Promise<string>
+  getAuthUrl(userId: string, context?: { returnOrigin?: string; redirectUri?: string }): Promise<string>
 
   /**
    * Exchanges an auth code for tokens and persists them to connected_services.

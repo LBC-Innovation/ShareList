@@ -216,7 +216,8 @@ export function getConnectedServices(): Promise<ApiResult<ConnectedService[]>> {
 }
 
 export function getStreamingAuthUrl(provider: string): Promise<ApiResult<{ url: string }>> {
-  return request<{ url: string }>(`/streaming/${provider}/auth-url`)
+  const params = new URLSearchParams({ returnOrigin: window.location.origin })
+  return request<{ url: string }>(`/streaming/${provider}/auth-url?${params.toString()}`)
 }
 
 export function submitAppleMusicToken(

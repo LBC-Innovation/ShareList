@@ -122,7 +122,7 @@ export class AppleMusicProvider implements StreamingProvider {
    * `state` — the HMAC-signed state generated in getAuthUrl
    */
   async handleCallback(code: string, state: string): Promise<{ providerUserId: string }> {
-    const userId = verifyState(state)
+    const { userId } = verifyState(state)
 
     // Fetch the storefront user ID from the Apple Music API
     const developerToken = generateDeveloperToken()
