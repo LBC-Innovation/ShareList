@@ -19,8 +19,7 @@ import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
 import { supabaseAdmin, supabaseAuth } from '../lib/supabase'
 import { getProvider } from '../streaming/registry'
-import { runCrossSync } from '../services/crossSync'
-import { applyShuffledOrder } from '../services/shuffle'
+import { runCrossSync, applyLinkedPlaylistOrder } from '../services/crossSync'
 import { getAccessibleSharelist, listAccessibleSharelists } from '../lib/sharelistAccess'
 
 // Side-effect: ensure providers are registered
@@ -633,7 +632,7 @@ router.post('/:id/shuffle', requireAuth, async (req: Request, res: Response) => 
     }
 
     log('info', 'shuffle started', { sharelistId: id, userId, trackCount: orderedTrackIds.length })
-    const result = await applyShuffledOrder(id, orderedTrackIds)
+    const result = await applyLinkedPlaylistOrder(id, orderedTrackIds)
     log('info', 'shuffle complete', { sharelistId: id, userId, totalWritten: result.totalWritten })
 
     res.json({ data: result, error: null })
