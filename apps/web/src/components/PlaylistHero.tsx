@@ -26,9 +26,9 @@ function formatTrackCount(n: number): string {
   return `${n} ${n === 1 ? 'song' : 'songs'}`
 }
 
-function ContributingPlaylists({ links, fullWidth }: { links: HeroLink[]; fullWidth: boolean }) {
+function ContributingPlaylists({ links }: { links: HeroLink[] }) {
   return (
-    <Flex gap={8} wrap="wrap" style={{ width: fullWidth ? '100%' : undefined }}>
+    <Flex gap={8} wrap="wrap" style={{ width: '100%' }}>
       {links.map(link => {
         const meta = PROVIDER_META[link.provider]
         if (!meta) return null
@@ -39,10 +39,12 @@ function ContributingPlaylists({ links, fullWidth }: { links: HeroLink[]; fullWi
             gap={6}
             style={{
               background: 'rgba(28, 31, 33, 0.8)',
+              border: '1px solid rgba(56, 189, 248, 0.18)',
               borderRadius: '20px',
               padding: '4px 10px 4px 4px',
-              minWidth: 0,
-              ...(fullWidth ? { flex: '1 1 100%', maxWidth: '100%' } : {}),
+              maxWidth: '100%',
+              width: 'fit-content',
+              boxSizing: 'border-box',
             }}
           >
             <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -55,7 +57,6 @@ function ContributingPlaylists({ links, fullWidth }: { links: HeroLink[]; fullWi
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              minWidth: 0,
             }}>
               {link.playlistName}
             </span>
@@ -141,7 +142,7 @@ export function PlaylistHero({ name, trackCount, links, onManageList, isLoading 
               <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 400, lineHeight: '1.4', margin: isCompact ? 0 : '0 0 12px 0' }}>
                 {formatTrackCount(trackCount)}
               </p>
-              {!isCompact && <ContributingPlaylists links={links} fullWidth={false} />}
+              {!isCompact && <ContributingPlaylists links={links} />}
             </>
           )}
         </div>
@@ -150,9 +151,9 @@ export function PlaylistHero({ name, trackCount, links, onManageList, isLoading 
       {isCompact && (isLoading || links.length > 0) && (
         <div style={{ marginBottom: '20px' }}>
           {isLoading ? (
-            <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
+            <Skeleton.Button active size="small" style={{ width: '140px', height: '28px', borderRadius: '20px', background: 'rgba(56, 189, 248, 0.1)' }} />
           ) : (
-            <ContributingPlaylists links={links} fullWidth />
+            <ContributingPlaylists links={links} />
           )}
         </div>
       )}
