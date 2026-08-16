@@ -1,4 +1,5 @@
-import { Badge, Button, Flex, Skeleton } from 'antd'
+import type { CSSProperties } from 'react'
+import { Button, Flex, Grid, Skeleton } from 'antd'
 import { SyncOutlined, SwapOutlined } from '@ant-design/icons'
 
 interface SyncStatusBarProps {
@@ -6,7 +7,6 @@ interface SyncStatusBarProps {
   syncing?: boolean
   crossSyncing?: boolean
   lastSynced?: Date | null
-  onManage?: () => void
   onSync?: () => void
   onCrossSync?: () => void
 }
@@ -22,63 +22,92 @@ function formatLastSynced(date: Date): string {
   return `${diffHours}h ago`
 }
 
-export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing = false, lastSynced, onManage, onSync, onCrossSync }: SyncStatusBarProps) {
+const actionButtonStyle: CSSProperties = {
+  background: 'transparent',
+  borderRadius: '8px',
+  height: '28px',
+  padding: '0 12px',
+  fontSize: '12px',
+  fontWeight: 600,
+  width: '100%',
+}
+
+export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing = false, lastSynced, onSync, onCrossSync }: SyncStatusBarProps) {
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
+  const actionGroupStyle: CSSProperties = isCompact
+    ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }
+    : { display: 'inline-grid', gridAutoFlow: 'column', gridAutoColumns: '1fr', gap: 8, flexShrink: 0 }
+
+  const lastFetched = lastSynced && (
+    <span style={{
+      color: '#64748B',
+      fontSize: '12px',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+      textAlign: isCompact ? 'center' : undefined,
+      width: isCompact ? '100%' : undefined,
+    }}>
+      Last Fetched{' '}
+      <span style={{ color: '#94A3B8', fontWeight: 500 }}>{formatLastSynced(lastSynced)}</span>
+    </span>
+  )
+
   if (isLoading) {
     return (
-      <Flex justify="space-between" align="center" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-        <Flex align="center" gap={8}>
-          <Skeleton.Avatar active size={10} style={{ background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%' }} />
-          <Skeleton.Input active size="small" style={{ width: '200px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-        </Flex>
-        <Skeleton.Button active size="small" style={{ width: '60px', height: '20px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+      <Flex
+        vertical={isCompact}
+        justify={isCompact ? 'center' : 'space-between'}
+        align={isCompact ? 'stretch' : 'center'}
+        gap={isCompact ? 8 : 12}
+        style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}
+      >
+        <div style={actionGroupStyle}>
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+          <Skeleton.Button active size="small" style={{ width: '100%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }} />
+        </div>
+        <Skeleton.Input active size="small" style={{ width: '120px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px', alignSelf: isCompact ? 'center' : undefined }} />
       </Flex>
     )
   }
 
   return (
-    <Flex justify="space-between" align="center" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-      <Flex align="center" gap={8}>
-        <Badge status="processing" color="#4ADE80" />
-        <span style={{ color: '#F1F5F9', fontSize: '13px', fontWeight: 500 }}>Live sync active</span>
-        {lastSynced && !syncing && (
-          <span style={{ color: '#64748B', fontSize: '12px' }}>· {formatLastSynced(lastSynced)}</span>
-        )}
-        {syncing && (
-          <span style={{ color: '#38BDF8', fontSize: '12px' }}>· syncing…</span>
-        )}
-        {crossSyncing && !syncing && (
-          <span style={{ color: '#4ADE80', fontSize: '12px' }}>· cross-syncing…</span>
-        )}
-      </Flex>
-      <Flex align="center" gap={12}>
+    <Flex
+      vertical={isCompact}
+      justify={isCompact ? 'center' : 'space-between'}
+      align={isCompact ? 'stretch' : 'center'}
+      gap={isCompact ? 8 : 12}
+      style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}
+    >
+      <div style={actionGroupStyle}>
         <Button
-          type="text"
           size="small"
           loading={crossSyncing}
-          icon={!crossSyncing && <SwapOutlined />}
+          icon={<SwapOutlined />}
           onClick={onCrossSync}
-          style={{ color: '#4ADE80', fontSize: '12px', fontWeight: 600, padding: '0 6px', height: '24px' }}
+          style={{
+            ...actionButtonStyle,
+            border: '1px solid rgba(74, 222, 128, 0.45)',
+            color: '#4ADE80',
+          }}
         >
-          {crossSyncing ? '' : 'Cross Sync'}
+          Sync Lists
         </Button>
         <Button
-          type="text"
           size="small"
           loading={syncing}
-          icon={!syncing && <SyncOutlined />}
+          icon={<SyncOutlined />}
           onClick={onSync}
-          style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, padding: '0 6px', height: '24px' }}
+          style={{
+            ...actionButtonStyle,
+            border: '1px solid rgba(56, 189, 248, 0.4)',
+            color: '#38BDF8',
+          }}
         >
-          {syncing ? '' : 'Force Sync'}
+          Fetch Songs
         </Button>
-        <Button
-          type="link"
-          onClick={onManage}
-          style={{ color: '#38BDF8', fontSize: '13px', fontWeight: 600, padding: 0 }}
-        >
-          Manage
-        </Button>
-      </Flex>
+      </div>
+      {lastFetched}
     </Flex>
   )
 }

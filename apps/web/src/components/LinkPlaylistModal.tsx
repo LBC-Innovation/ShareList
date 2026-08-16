@@ -286,8 +286,8 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
           </Text>
           <div style={{
             maxHeight: '280px',
-            overflowY: confirmLinkId ? 'visible' : 'auto',
-            overflowX: 'visible',
+            overflowY: 'auto',
+            overflowX: 'hidden',
             background: 'rgba(17, 19, 20, 0.5)',
             borderRadius: '12px',
             border: '1px solid rgba(56, 189, 248, 0.15)',
@@ -308,8 +308,8 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
                       border: '1px solid rgba(56, 189, 248, 0.1)',
                       borderRadius: '10px',
                       position: 'relative',
-                      zIndex: confirming ? 9999 : 1,
-                      overflow: 'visible',
+                      zIndex: confirming ? 2 : 1,
+                      overflow: 'hidden',
                     }}
                   >
                     <Flex justify="space-between" align="center" gap={12}>
@@ -447,9 +447,9 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)',
             borderRadius: '16px',
             padding: 0,
-            overflow: 'visible',
+            overflow: 'hidden',
           },
-          body: { padding: 0, margin: 0, overflow: 'visible' },
+          body: { padding: 0, margin: 0, overflow: 'hidden' },
           mask: { backdropFilter: 'blur(3px)', background: 'rgba(0, 0, 0, 0.4)' },
         }}
       >
@@ -479,7 +479,7 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
           </Flex>
         </div>
 
-        <div style={{ padding: '16px 28px 24px' }}>
+        <div style={{ padding: '16px 28px 24px', overflow: 'hidden' }}>
           <Tabs
             activeKey={activeTab}
             onChange={key => {

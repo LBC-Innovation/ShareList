@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Layout, Typography, Card, Flex, Button, Tag, Skeleton, notification, Popconfirm } from 'antd'
+import { Layout, Typography, Card, Flex, Button, Tag, Skeleton, notification, Popconfirm, Grid } from 'antd'
 import { LinkOutlined, DisconnectOutlined, CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import * as api from '../lib/api'
 import type { ConnectedService, StreamingProvider } from '../lib/api'
@@ -38,6 +38,8 @@ const PROVIDER_META: Record<string, { color: string; icon: string }> = {
 
 export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
 
   const [providers, setProviders] = useState<StreamingProvider[]>([])
   const [connected, setConnected] = useState<ConnectedService[]>([])
@@ -127,7 +129,7 @@ export function Settings() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Content style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px 24px' }}>
+    <Content style={{ maxWidth: '800px', margin: '0 auto', padding: isCompact ? '24px 16px 24px' : '32px 24px 24px' }}>
       {contextHolder}
 
       <Title
@@ -182,13 +184,18 @@ export function Settings() {
               <div
                 key={provider.name}
                 style={{
-                  padding: '18px 24px',
+                  padding: isCompact ? '16px' : '18px 24px',
                   borderBottom: index < providers.length - 1 ? `1px solid ${SL.border}` : 'none',
                 }}
               >
-                <Flex align="center" justify="space-between" gap={16}>
+                <Flex
+                  vertical={isCompact}
+                  align={isCompact ? 'stretch' : 'center'}
+                  justify="space-between"
+                  gap={isCompact ? 14 : 16}
+                >
                   {/* Provider info */}
-                  <Flex align="center" gap={14}>
+                  <Flex align="center" gap={14} style={{ minWidth: 0, flex: isCompact ? undefined : 1 }}>
                     <div style={{
                       width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
                       background: `${meta.color}18`,
@@ -198,12 +205,12 @@ export function Settings() {
                     }}>
                       {meta.icon}
                     </div>
-                    <div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <Text style={{ color: SL.text, fontSize: '15px', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
                         {provider.displayName}
                       </Text>
                       {connected_ && connectedDate ? (
-                        <Flex align="center" gap={6}>
+                        <Flex vertical={isCompact} align={isCompact ? 'flex-start' : 'center'} gap={isCompact ? 4 : 6}>
                           <Tag
                             icon={<CheckOutlined />}
                             style={{
@@ -223,7 +230,7 @@ export function Settings() {
                           >
                             Connected
                           </Tag>
-                          <Text style={{ color: SL.muted, fontSize: '12px' }}>
+                          <Text style={{ color: SL.muted, fontSize: '12px', whiteSpace: 'nowrap' }}>
                             since {connectedDate}
                           </Text>
                         </Flex>
@@ -244,6 +251,7 @@ export function Settings() {
                       okButtonProps={{ danger: true }}
                     >
                       <Button
+                        block={isCompact}
                         icon={<DisconnectOutlined />}
                         loading={disconnecting === provider.name}
                         style={{
@@ -263,6 +271,7 @@ export function Settings() {
                     </Popconfirm>
                   ) : (
                     <Button
+                      block={isCompact}
                       icon={<LinkOutlined />}
                       onClick={() => setLinkProvider(provider)}
                       style={{

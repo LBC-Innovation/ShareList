@@ -25,9 +25,19 @@
 
 .sl-unlink-confirm.ant-btn {
   position: relative;
-  z-index: 9999;
+  z-index: 1;
   overflow: visible;
   isolation: isolate;
+}
+
+/* Clip pulse rings to the modal so they never expand the page */
+.ant-modal-wrap {
+  overflow-x: hidden;
+}
+
+.ant-modal .ant-modal-container,
+.ant-modal .ant-modal-content {
+  overflow: hidden;
 }
 
 .sl-unlink-confirm.ant-btn > * {
@@ -49,8 +59,12 @@
   animation: sl-unlink-confirm-ring 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
-.sl-unlink-confirm.ant-btn::after {
-  animation-delay: 0.7s;
+@keyframes sl-shuffle-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sl-shuffle-spin {
+  animation: sl-shuffle-spin 2.4s linear infinite;
 }
 
 .sl-user-menu-email.ant-dropdown-menu-item-disabled {

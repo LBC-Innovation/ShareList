@@ -118,6 +118,7 @@ async function spotifyFetch(url: string, init: RequestInit, attempt = 0): Promis
 
 /** Number of milliseconds before expiry at which we preemptively refresh. */
 const REFRESH_BUFFER_MS = 5 * 60 * 1000 // 5 minutes
+const ITEM_BATCH_SIZE = 100
 
 const PROVIDER_NAME = 'spotify'
 
@@ -360,34 +361,41 @@ export class SpotifyProvider implements StreamingProvider {
     if (trackIds.length === 0) return { added: 0 }
 
     const accessToken = await this.refreshTokenIfNeeded(userId)
-    const BATCH_SIZE = 100
     let added = 0
 
-    for (let i = 0; i < trackIds.length; i += BATCH_SIZE) {
-      const batch = trackIds.slice(i, i + BATCH_SIZE)
-      const uris = batch.map(id => `spotify:track:${id}`)
-
-      const res = await spotifyFetch(
-        `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ uris }),
-        },
-      )
-
-      if (!res.ok) {
-        const body = await res.text()
-        throw new Error(`Spotify addTracksToPlaylist failed (${res.status}): ${body}`)
-      }
-
+    for (let i = 0; i < trackIds.length; i += ITEM_BATCH_SIZE) {
+      const batch = trackIds.slice(i, i + ITEM_BATCH_SIZE)
+      await this.writePlaylistItems(accessToken, playlistId, batch, 'POST')
       added += batch.length
     }
 
     return { added }
+  }
+
+  /**
+   * Replaces a playlist's items with `trackIds` in order.
+   * PUT /items accepts at most 100 URIs; remaining tracks are appended in batches.
+   * Spotify removed PUT /playlists/{id}/tracks in the February 2026 API migration.
+   */
+  async replacePlaylistTracks(
+    userId: string,
+    playlistId: string,
+    trackIds: string[],
+  ): Promise<{ written: number }> {
+    if (trackIds.length === 0) return { written: 0 }
+
+    const accessToken = await this.refreshTokenIfNeeded(userId)
+    const first = trackIds.slice(0, ITEM_BATCH_SIZE)
+    await this.writePlaylistItems(accessToken, playlistId, first, 'PUT')
+
+    let written = first.length
+    for (let i = ITEM_BATCH_SIZE; i < trackIds.length; i += ITEM_BATCH_SIZE) {
+      const batch = trackIds.slice(i, i + ITEM_BATCH_SIZE)
+      await this.writePlaylistItems(accessToken, playlistId, batch, 'POST')
+      written += batch.length
+    }
+
+    return { written }
   }
 
   async disconnect(userId: string): Promise<void> {
@@ -395,6 +403,31 @@ export class SpotifyProvider implements StreamingProvider {
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
+
+  /** POST appends items; PUT replaces the playlist with the given URIs. */
+  private async writePlaylistItems(
+    accessToken: string,
+    playlistId: string,
+    trackIds: string[],
+    method: 'POST' | 'PUT',
+  ): Promise<void> {
+    const res = await spotifyFetch(
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items`,
+      {
+        method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uris: trackIds.map(id => `spotify:track:${id}`) }),
+      },
+    )
+
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`Spotify playlist items ${method} failed (${res.status}): ${body}`)
+    }
+  }
 
   private async _exchangeCode(code: string): Promise<SpotifyTokenResponse> {
     const body = new URLSearchParams({

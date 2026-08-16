@@ -2,7 +2,7 @@
  * LinkPlatformModal
  *
  * Entry-point modal for linking a streaming service, triggered from the
- * LaunchStreamingFAB or the SyncStatusBar "Manage" button on the main view.
+ * LaunchStreamingFAB on the playlist view.
  *
  * Two steps:
  *   'pick'    — lists all available providers with their connection status.

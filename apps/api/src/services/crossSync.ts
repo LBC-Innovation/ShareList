@@ -64,13 +64,23 @@ export interface CrossSyncResult {
   totalAdded: number
 }
 
+export interface PlaylistOrderLinkResult {
+  linkId: string
+  provider: string
+  playlistName: string
+  written: number
+  error?: string
+}
+
+export interface PlaylistOrderResult {
+  sharelistId: string
+  links: PlaylistOrderLinkResult[]
+  totalWritten: number
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
-export async function runCrossSync(
-  _userId: string,
-  sharelistId: string,
-): Promise<CrossSyncResult> {
-  // ── 1. Load all links for this ShareList ────────────────────────────────────
+async function loadSharelistLinks(sharelistId: string): Promise<SharelistLinkRow[]> {
   const { data: links, error: linksErr } = await supabaseAdmin
     .from('sharelist_links')
     .select('*')
@@ -78,11 +88,17 @@ export async function runCrossSync(
     .order('is_primary', { ascending: false })
 
   if (linksErr) throw new Error(linksErr.message)
-  if (!links || links.length === 0) {
+  return (links ?? []) as SharelistLinkRow[]
+}
+
+export async function runCrossSync(
+  _userId: string,
+  sharelistId: string,
+): Promise<CrossSyncResult> {
+  const linkRows = await loadSharelistLinks(sharelistId)
+  if (linkRows.length === 0) {
     return { sharelistId, links: [], totalAdded: 0 }
   }
-
-  const linkRows = links as SharelistLinkRow[]
 
   // ── 2. Fetch live tracks for every link (parallel) ──────────────────────────
   const tracksByLink = new Map<string, string[]>() // linkId → providerTrackIds
@@ -233,4 +249,85 @@ export async function runCrossSync(
   }
 
   return { sharelistId, links: linkResults, totalAdded }
+}
+
+/**
+ * Rewrites each linked playlist so its own tracks follow `orderedTrackIds`.
+ * Playlist membership is preserved; only relative order changes.
+ * Uses the same link loading and provider write surface as Sync Lists.
+ */
+export async function applyLinkedPlaylistOrder(
+  sharelistId: string,
+  orderedTrackIds: string[],
+): Promise<PlaylistOrderResult> {
+  const linkRows = await loadSharelistLinks(sharelistId)
+  if (linkRows.length === 0) {
+    return { sharelistId, links: [], totalWritten: 0 }
+  }
+
+  const results: PlaylistOrderLinkResult[] = []
+
+  for (const link of linkRows) {
+    const playlistName = link.provider_playlist_name
+    try {
+      const provider = getProvider(link.provider)
+      const live = await provider.getPlaylistTracks(link.user_id, link.provider_playlist_id)
+      const liveIds = new Set(live.map(track => track.id))
+      const ordered: string[] = []
+      const used = new Set<string>()
+
+      for (const id of orderedTrackIds) {
+        if (!liveIds.has(id) || used.has(id)) continue
+        ordered.push(id)
+        used.add(id)
+      }
+      for (const track of live) {
+        if (used.has(track.id)) continue
+        ordered.push(track.id)
+        used.add(track.id)
+      }
+
+      const { written } = await provider.replacePlaylistTracks(
+        link.user_id,
+        link.provider_playlist_id,
+        ordered,
+      )
+
+      log('info', 'playlist order rewritten', {
+        sharelistId,
+        linkId: link.id,
+        provider: link.provider,
+        playlistName,
+        written,
+      })
+
+      results.push({
+        linkId: link.id,
+        provider: link.provider,
+        playlistName,
+        written,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      log('warn', 'failed to rewrite playlist order', {
+        sharelistId,
+        linkId: link.id,
+        provider: link.provider,
+        error: message,
+      })
+      results.push({
+        linkId: link.id,
+        provider: link.provider,
+        playlistName,
+        written: 0,
+        error: message,
+      })
+    }
+  }
+
+  return {
+    sharelistId,
+    links: results,
+    totalWritten: results.reduce((sum, row) => sum + row.written, 0),
+  }
 }

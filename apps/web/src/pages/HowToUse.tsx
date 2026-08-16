@@ -34,22 +34,27 @@ const STEPS: Step[] = [
   {
     n: '04',
     title: 'Link their playlist',
-    body: 'Your friend opens the shared list, taps Manage, and links one of their playlists on the same service. Both of you then contribute to the same ShareList.',
+    body: 'Your friend opens the shared list, taps Manage List, and links one of their playlists on the same service. Both of you then contribute to the same ShareList.',
   },
   {
     n: '05',
-    title: 'Merge with Cross Sync',
-    body: 'Cross Sync copies songs that are missing from each linked playlist into the others (same service). Linking a playlist also runs this automatically. After a merge, each person keeps their own playlist in Spotify or Apple Music — now with the combined tracks.',
+    title: 'Merge with Sync Lists',
+    body: 'Sync Lists copies songs that are missing from each linked playlist into the others (same service). Linking a playlist also runs this automatically. After a merge, each person keeps their own playlist in Spotify or Apple Music — now with the combined tracks.',
   },
   {
     n: '06',
-    title: 'Refresh with Force Sync',
-    body: 'Force Sync only updates what you see in ShareList: playlist name, artwork, and the current song list. It does not add songs to Spotify or Apple Music.',
+    title: 'Refresh with Fetch Songs',
+    body: 'Fetch Songs only updates what you see in ShareList: playlist name, artwork, and the current song list. It does not add songs to Spotify or Apple Music.',
   },
   {
     n: '07',
+    title: 'Shuffle the songs',
+    body: 'On a ShareList, tap Shuffle above the song list. Songs float up or down to their new places, then ShareList writes that order to the linked playlists on Spotify or Apple Music.',
+  },
+  {
+    n: '08',
     title: 'Leave or delete without wiping friends',
-    body: "Manage lets you unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
+    body: "Manage List lets you unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
   },
 ]
 
@@ -114,7 +119,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       },
       {
         key: 'manage',
-        term: 'Manage',
+        term: 'Manage List',
         meaning: 'The panel on a ShareList for adding another playlist, unlinking one, leaving, or deleting (owner only).',
       },
     ],
@@ -125,20 +130,25 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
     rows: [
       {
         key: 'force-sync',
-        term: 'Force Sync',
+        term: 'Fetch Songs',
         accent: 'accent',
         meaning: 'Reloads the ShareList in the app. Pulls fresh names, artwork, and songs from each linked playlist. Does not write anything back to Spotify or Apple Music.',
       },
       {
         key: 'cross-sync',
-        term: 'Cross Sync',
+        term: 'Sync Lists',
         accent: 'mint',
         meaning: "Merges tracks across linked playlists on the same service. Songs in A's playlist that B is missing are added to B's playlist, and the other way around. This is the only sync that changes streaming playlists.",
       },
       {
         key: 'unique-songs',
         term: 'Unique songs',
-        meaning: "In the app, a song that exists in more than one linked playlist is shown once. After Cross Sync the same track may still live in each person's Spotify or Apple playlist - that is expected.",
+        meaning: "In the app, a song that exists in more than one linked playlist is shown once. After Sync Lists the same track may still live in each person's Spotify or Apple playlist - that is expected.",
+      },
+      {
+        key: 'shuffle',
+        term: 'Shuffle',
+        meaning: 'Randomly reorders the songs you see, then writes that new order to the linked playlists.',
       },
     ],
   },
@@ -267,7 +277,7 @@ export function HowToUse() {
           Definitions
         </Title>
         <Paragraph style={{ color: SL.muted, fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-          Force Sync and Cross Sync are not the same action. Force Sync refreshes the view. Cross Sync copies missing songs into each linked playlist.
+          Fetch Songs and Sync Lists are not the same action. Fetch Songs refreshes the view. Sync Lists copies missing songs into each linked playlist.
         </Paragraph>
       </Flex>
 

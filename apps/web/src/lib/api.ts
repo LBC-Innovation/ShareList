@@ -324,6 +324,27 @@ export function crossSyncShareList(id: string): Promise<ApiResult<CrossSyncResul
   return request<CrossSyncResult>(`/sharelists/${id}/cross-sync`, { method: 'POST' })
 }
 
+export interface ShuffleLinkResult {
+  linkId: string
+  provider: string
+  playlistName: string
+  written: number
+  error?: string
+}
+
+export interface ShuffleResult {
+  sharelistId: string
+  links: ShuffleLinkResult[]
+  totalWritten: number
+}
+
+export function shuffleShareList(id: string, trackIds: string[]): Promise<ApiResult<ShuffleResult>> {
+  return request<ShuffleResult>(`/sharelists/${id}/shuffle`, {
+    method: 'POST',
+    body: JSON.stringify({ trackIds }),
+  })
+}
+
 export function linkPlaylistToShareList(
   sharelistId: string,
   data: {

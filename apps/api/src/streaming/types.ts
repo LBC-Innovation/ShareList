@@ -85,6 +85,16 @@ export interface StreamingProvider {
     trackIds: string[],
   ): Promise<{ added: number }>
 
+  /**
+   * Replaces a playlist's tracks with `trackIds` in the given order.
+   * Existing items are removed. Providers that cannot write should throw.
+   */
+  replacePlaylistTracks(
+    userId: string,
+    playlistId: string,
+    trackIds: string[],
+  ): Promise<{ written: number }>
+
   /** Removes all stored tokens for this user / provider pair. */
   disconnect(userId: string): Promise<void>
 }
