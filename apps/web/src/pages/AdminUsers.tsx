@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Layout, Typography, Button, Tag, Flex, Card, Skeleton, Alert } from 'antd'
+import { UserAvatar } from '../components/UserAvatar'
 import { PlusOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import { useAuth } from '../context/AuthContext'
 import * as api from '../lib/api'
@@ -120,7 +121,6 @@ export function AdminUsers() {
         ) : (
           users.map((user, index) => {
             const displayName = user.displayName ?? user.email ?? '?'
-            const initials = displayName.charAt(0).toUpperCase()
             return (
               <div
                 key={user.id}
@@ -137,14 +137,19 @@ export function AdminUsers() {
                 <Flex align="center">
                   {/* User info */}
                   <Flex align="center" gap={12} style={{ flex: '1 1 35%', paddingRight: '16px', minWidth: 0 }}>
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
-                    }}>
-                      {initials}
-                    </div>
+                    <UserAvatar
+                      src={user.avatarUrl}
+                      name={displayName}
+                      size={40}
+                      shape="square"
+                      style={{
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        color: '#FFFFFF',
+                      }}
+                    />
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <Text style={{ color: '#F1F5F9', fontSize: '14px', fontWeight: 600, display: 'block', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {displayName}
