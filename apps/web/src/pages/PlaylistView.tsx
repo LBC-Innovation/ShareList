@@ -9,6 +9,7 @@ import { LinkPlaylistModal } from '../components/LinkPlaylistModal'
 import type { Track } from '../components/TrackList'
 import * as api from '../lib/api'
 import type { ShareListDetail } from '../lib/api'
+import { notifyApiFailure, notifyShareListWarnings } from '../lib/notify'
 
 const { Content } = Layout
 const { Text } = Typography
@@ -79,9 +80,11 @@ export function PlaylistView() {
     setLoading(false)
     if (api.isError(result)) {
       setError(result.error.message)
+      notifyApiFailure(notifyApi, 'Failed to load ShareList', result)
       return
     }
     setSharelist(result.data)
+    notifyShareListWarnings(notifyApi, result.data.warnings)
   }
 
   const runSyncLists = async (): Promise<api.CrossSyncResult | null> => {
@@ -90,7 +93,7 @@ export function PlaylistView() {
     try {
       const result = await api.crossSyncShareList(id)
       if (api.isError(result)) {
-        notifyApi.error({ message: 'Sync Lists failed', description: result.error.message, placement: 'topRight' })
+        notifyApiFailure(notifyApi, 'Sync Lists failed', result)
         return null
       }
       return result.data
@@ -145,10 +148,11 @@ export function PlaylistView() {
     const result = await api.syncShareList(id)
     setSyncing(false)
     if (api.isError(result)) {
-      notifyApi.error({ message: 'Fetch Songs failed', description: result.error.message, placement: 'topRight' })
+      notifyApiFailure(notifyApi, 'Fetch Songs failed', result)
       return
     }
     setSharelist(result.data)
+    notifyShareListWarnings(notifyApi, result.data.warnings)
   }
 
   useEffect(() => {
@@ -171,11 +175,7 @@ export function PlaylistView() {
         wait(SHUFFLE_MOVE_MS),
       ])
       if (api.isError(result)) {
-        notifyApi.error({
-          message: 'Shuffle synced locally, but remote playlists were not updated',
-          description: result.error.message,
-          placement: 'topRight',
-        })
+        notifyApiFailure(notifyApi, 'Shuffle synced locally, but remote playlists were not updated', result)
         return
       }
 
@@ -286,7 +286,11 @@ export function PlaylistView() {
             styles={{ body: { padding: '48px 20px' } }}
           >
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎵</div>
-            <Text style={{ color: '#64748B', fontSize: '14px' }}>No tracks found for this playlist.</Text>
+            <Text style={{ color: '#64748B', fontSize: '14px' }}>
+              {sharelist?.warnings?.length
+                ? sharelist.warnings[0]
+                : 'No tracks found for this playlist.'}
+            </Text>
           </Card>
         ) : (
           <TrackList

@@ -281,6 +281,7 @@ export interface ShareListDetail extends ShareListSummary {
   tracks: ShareListTrack[]
   ownerEmail?: string
   members?: ShareListMember[]
+  warnings?: string[]
 }
 
 export function listShareLists(): Promise<ApiResult<ShareListSummary[]>> {

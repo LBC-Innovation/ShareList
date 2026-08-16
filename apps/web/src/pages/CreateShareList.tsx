@@ -22,6 +22,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
 import * as api from '../lib/api'
+import { notifyApiFailure } from '../lib/notify'
 import type { ConnectedService, StreamingPlaylist } from '../lib/api'
 
 const { Content } = Layout
@@ -67,7 +68,7 @@ export function CreateShareList() {
       const result = await api.getStreamingPlaylists(selectedService)
       setPlaylistsLoading(false)
       if (api.isError(result)) {
-        notifyApi.error({ message: 'Failed to load playlists', description: result.error.message, placement: 'topRight' })
+        notifyApiFailure(notifyApi, 'Failed to load playlists', result)
         return
       }
       setPlaylists(result.data)
@@ -87,7 +88,7 @@ export function CreateShareList() {
         externalUrl: playlist.externalUrl ?? null,
       })
       if (api.isError(result)) {
-        notifyApi.error({ message: 'Failed to create ShareList', description: result.error.message, placement: 'topRight' })
+        notifyApiFailure(notifyApi, 'Failed to create ShareList', result)
         return
       }
       navigate(`/list/${result.data.id}`)
