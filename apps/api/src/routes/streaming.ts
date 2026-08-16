@@ -16,6 +16,7 @@
 
 import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
+import { clientOrigin } from '../lib/origins'
 import { getProvider, listProviders } from '../streaming/registry'
 import { getConnectedProviders } from '../streaming/oauthHelpers'
 
@@ -24,8 +25,6 @@ import '../streaming/spotify'
 import '../streaming/apple-music'
 
 const router = Router()
-
-const CLIENT_ORIGIN = process.env['CLIENT_ORIGIN'] ?? 'http://localhost:5173'
 
 function log(level: string, message: string, ctx: Record<string, unknown> = {}): void {
   console.log(JSON.stringify({ level, message, ...ctx }))
@@ -84,12 +83,12 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
   // Provider denied access
   if (oauthError) {
     log('warn', 'OAuth provider returned error', { provider, oauthError })
-    res.redirect(`${CLIENT_ORIGIN}/settings/streaming?error=${encodeURIComponent(oauthError)}&provider=${provider}`)
+    res.redirect(`${clientOrigin()}/settings/streaming?error=${encodeURIComponent(oauthError)}&provider=${provider}`)
     return
   }
 
   if (!code || !state) {
-    res.redirect(`${CLIENT_ORIGIN}/settings/streaming?error=missing_params&provider=${provider}`)
+    res.redirect(`${clientOrigin()}/settings/streaming?error=missing_params&provider=${provider}`)
     return
   }
 
@@ -97,11 +96,11 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
     const p = getProvider(provider)
     await p.handleCallback(code, state)
     log('info', 'OAuth callback success', { provider })
-    res.redirect(`${CLIENT_ORIGIN}/settings/streaming?connected=${provider}`)
+    res.redirect(`${clientOrigin()}/settings/streaming?connected=${provider}`)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'OAuth callback failed', { provider, error: message })
-    res.redirect(`${CLIENT_ORIGIN}/settings/streaming?error=${encodeURIComponent(message)}&provider=${provider}`)
+    res.redirect(`${clientOrigin()}/settings/streaming?error=${encodeURIComponent(message)}&provider=${provider}`)
   }
 })
 
