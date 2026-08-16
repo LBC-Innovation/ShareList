@@ -392,7 +392,8 @@ export class SpotifyProvider implements StreamingProvider {
 
   /**
    * Replaces a playlist's items with `trackIds` in order.
-   * PUT accepts at most 100 URIs; remaining tracks are appended in batches.
+   * PUT /items accepts at most 100 URIs; remaining tracks are appended in batches.
+   * Spotify removed PUT /playlists/{id}/tracks in the February 2026 API migration.
    */
   async replacePlaylistTracks(
     userId: string,
@@ -407,7 +408,7 @@ export class SpotifyProvider implements StreamingProvider {
     const uris = first.map(id => `spotify:track:${id}`)
 
     const replaceRes = await spotifyFetch(
-      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`,
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items`,
       {
         method: 'PUT',
         headers: {
