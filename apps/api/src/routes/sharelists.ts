@@ -19,6 +19,7 @@ import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
 import { supabaseAdmin, supabaseAuth } from '../lib/supabase'
 import { getProvider } from '../streaming/registry'
+import { isProviderRateLimitError, providerErrorHttp } from '../streaming/errors'
 import { runCrossSync, applyLinkedPlaylistOrder } from '../services/crossSync'
 import { getAccessibleSharelist, listAccessibleSharelists } from '../lib/sharelistAccess'
 
@@ -30,6 +31,27 @@ const router = Router()
 
 function log(level: string, message: string, ctx: Record<string, unknown> = {}): void {
   console.log(JSON.stringify({ level, message, ...ctx }))
+}
+
+function trackFetchWarning(reason: unknown, playlistName: string): string {
+  if (isProviderRateLimitError(reason)) return reason.message
+  const errMsg = reason instanceof Error ? reason.message : 'Unknown'
+  if (errMsg.includes('403') || errMsg.includes('must own it')) {
+    return `${playlistName}: Spotify only returns tracks for playlists the connected account owns or collaborates on`
+  }
+  return `${playlistName}: ${errMsg}`
+}
+
+function sendCaughtError(res: Response, err: unknown, logMessage: string, ctx: Record<string, unknown>): void {
+  const limited = providerErrorHttp(err)
+  if (limited) {
+    log('warn', logMessage, { ...ctx, error: limited.message, code: limited.code })
+    res.status(limited.status).json({ data: null, error: { message: limited.message, code: limited.code } })
+    return
+  }
+  const message = err instanceof Error ? err.message : 'Unknown error'
+  log('error', logMessage, { ...ctx, error: message })
+  res.status(500).json({ data: null, error: { message } })
 }
 
 async function getOwnerEmail(userId: string): Promise<string> {
@@ -329,17 +351,17 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     )
 
     const tracks: unknown[] = []
+    const warnings: string[] = []
     for (let i = 0; i < trackResults.length; i++) {
       const result = trackResults[i]
+      const playlistName = orderedLinks[i].provider_playlist_name
       if (result.status === 'fulfilled') {
         tracks.push(...result.value)
         log('info', 'tracks fetched', { sharelistId: id, provider: orderedLinks[i].provider, trackCount: result.value.length })
       } else {
-        const errMsg = result.reason instanceof Error ? result.reason.message : 'Unknown'
-        const hint = errMsg.includes('403')
-          ? ' (token may be expired or missing scopes — try disconnecting and reconnecting the service in Settings)'
-          : ''
-        log('warn', 'getPlaylistTracks failed', { sharelistId: id, provider: orderedLinks[i].provider, error: errMsg + hint })
+        const warning = trackFetchWarning(result.reason, playlistName)
+        warnings.push(warning)
+        log('warn', 'getPlaylistTracks failed', { sharelistId: id, provider: orderedLinks[i].provider, error: warning })
       }
     }
 
@@ -366,13 +388,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           userId: l.user_id,
         })),
         tracks: uniqueTracks,
+        warnings: [...new Set(warnings)],
       },
       error: null,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    log('error', 'GET /sharelists/:id failed', { id, userId, error: message })
-    res.status(500).json({ data: null, error: { message } })
+    sendCaughtError(res, err, 'GET /sharelists/:id failed', { id, userId })
   }
 })
 
@@ -403,6 +424,7 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
 
     const linkRows = (links ?? []) as SharelistLinkRow[]
     let tracks: unknown[] = []
+    const warnings: string[] = []
 
     // Refresh every linked playlist's metadata and collect tracks from primary
     for (const link of linkRows) {
@@ -447,11 +469,13 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
         tracks.push(...tagged)
         log('info', 'tracks synced', { sharelistId: id, provider: link.provider, trackCount: linkTracks.length })
       } catch (syncErr) {
+        const warning = trackFetchWarning(syncErr, link.provider_playlist_name)
+        warnings.push(warning)
         log('warn', 'sync failed for link', {
           sharelistId: id,
           linkId: link.id,
           provider: link.provider,
-          error: syncErr instanceof Error ? syncErr.message : 'Unknown',
+          error: warning,
         })
       }
     }
@@ -479,13 +503,12 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
           userId: l.user_id,
         })),
         tracks: uniqueTracks,
+        warnings: [...new Set(warnings)],
       },
       error: null,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    log('error', 'POST /sharelists/:id/sync failed', { id, userId, error: message })
-    res.status(500).json({ data: null, error: { message } })
+    sendCaughtError(res, err, 'POST /sharelists/:id/sync failed', { id, userId })
   }
 })
 
@@ -656,9 +679,7 @@ router.post('/:id/cross-sync', requireAuth, async (req: Request, res: Response) 
 
     res.json({ data: result, error: null })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    log('error', 'POST /sharelists/:id/cross-sync failed', { id, userId, error: message })
-    res.status(500).json({ data: null, error: { message } })
+    sendCaughtError(res, err, 'POST /sharelists/:id/cross-sync failed', { id, userId })
   }
 })
 
@@ -693,9 +714,7 @@ router.post('/:id/shuffle', requireAuth, async (req: Request, res: Response) => 
 
     res.json({ data: result, error: null })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    log('error', 'POST /sharelists/:id/shuffle failed', { id, userId, error: message })
-    res.status(500).json({ data: null, error: { message } })
+    sendCaughtError(res, err, 'POST /sharelists/:id/shuffle failed', { id, userId })
   }
 })
 

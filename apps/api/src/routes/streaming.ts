@@ -19,6 +19,7 @@ import { requireAuth } from '../middleware/auth'
 import { clientOrigins, resolveReturnOrigin, resolveSpotifyRedirectUri } from '../lib/origins'
 import { getProvider, listProviders } from '../streaming/registry'
 import { getConnectedProviders, verifyState } from '../streaming/oauthHelpers'
+import { providerErrorHttp } from '../streaming/errors'
 
 // Side-effect imports — register all providers with the registry
 import '../streaming/spotify'
@@ -153,6 +154,12 @@ router.get('/:provider/playlists', requireAuth, async (req: Request, res: Respon
     const playlists = await p.getPlaylists(req.user!.id)
     res.json({ data: playlists, error: null })
   } catch (err) {
+    const limited = providerErrorHttp(err)
+    if (limited) {
+      log('warn', 'getPlaylists failed', { provider, userId: req.user?.id, error: limited.message, code: limited.code })
+      res.status(limited.status).json({ data: null, error: { message: limited.message, code: limited.code } })
+      return
+    }
     const message = err instanceof Error ? err.message : 'Unknown error'
     const status = message.startsWith('Unknown streaming provider') ? 400 : 500
     log('error', 'getPlaylists failed', { provider, userId: req.user?.id, error: message })

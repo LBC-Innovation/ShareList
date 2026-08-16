@@ -17,6 +17,16 @@ const app = express()
 const PORT = process.env['PORT'] ?? 3001
 const allowedOrigins = new Set(clientOrigins())
 
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : undefined
+  console.log(JSON.stringify({
+    level: 'error',
+    message: 'Unhandled promise rejection',
+    error: err?.message ?? String(reason),
+    stack: err?.stack,
+  }))
+})
+
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.has(origin)) {

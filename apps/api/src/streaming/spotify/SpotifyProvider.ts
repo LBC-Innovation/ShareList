@@ -17,6 +17,7 @@ import {
   getTokens,
   deleteTokens,
 } from '../oauthHelpers'
+import { invalidateSpotifyGetCache, spotifyFetch } from './spotifyHttp'
 import type { StreamingPlaylist, StreamingProvider, StreamingTrack } from '../types'
 
 // ── Env helpers ───────────────────────────────────────────────────────────────
@@ -53,7 +54,11 @@ interface SpotifyPlaylistItem {
   id: string
   name: string
   description: string | null
-  tracks: { total: number } | null
+  collaborative?: boolean | null
+  owner?: { id: string } | null
+  // Feb 2026 renamed tracks → items; listing responses may still send tracks.total
+  tracks?: SpotifyPlaylistItemsResponse | { total?: number } | null
+  items?: SpotifyPlaylistItemsResponse | { total?: number } | null
   images: { url: string }[] | null
   external_urls: { spotify: string } | null
   public: boolean | null
@@ -96,22 +101,88 @@ interface SpotifyEpisodeObject {
   id: string
 }
 
-// ── Rate-limit-aware fetch ────────────────────────────────────────────────────
+function playlistTrackCount(
+  item: { tracks?: { total?: number } | null; items?: { total?: number } | null },
+): number {
+  return item.items?.total ?? item.tracks?.total ?? 0
+}
 
-/**
- * Wraps fetch() with Retry-After / exponential-backoff handling for HTTP 429.
- * Per Spotify rules: respect the Retry-After header; never retry in a tight loop.
- */
-async function spotifyFetch(url: string, init: RequestInit, attempt = 0): Promise<Response> {
-  const res = await fetch(url, init)
-  if (res.status === 429) {
-    const retryAfter = parseInt(res.headers.get('Retry-After') ?? '1', 10)
-    const waitMs = (isNaN(retryAfter) ? 1 : retryAfter) * 1000 * Math.pow(2, attempt)
-    console.log(JSON.stringify({ level: 'warn', message: 'Spotify rate limited', retryAfterMs: waitMs, attempt }))
-    await new Promise(r => setTimeout(r, waitMs))
-    return spotifyFetch(url, init, attempt + 1)
+function canReadPlaylistItems(
+  playlist: SpotifyPlaylistItem,
+  spotifyUserId: string | null | undefined,
+): boolean {
+  if (playlist.collaborative === true) return true
+  if (spotifyUserId && playlist.owner?.id === spotifyUserId) return true
+  return false
+}
+
+function asItemPaging(
+  value: SpotifyPlaylistItem['items'] | SpotifyPlaylistItem['tracks'],
+): SpotifyPlaylistItemsResponse | null {
+  if (!value || !('items' in value) || !Array.isArray(value.items)) return null
+  return value as SpotifyPlaylistItemsResponse
+}
+
+function tracksFromPaging(data: SpotifyPlaylistItemsResponse): StreamingTrack[] {
+  const tracks: StreamingTrack[] = []
+  if (!Array.isArray(data.items)) return tracks
+
+  for (const item of data.items) {
+    const audioObj = item.item ?? item.track
+    if (!audioObj) continue
+    if (audioObj.type !== 'track') continue
+    const t = audioObj as SpotifyTrackObject
+    if (!t.id) continue
+    tracks.push({
+      id: t.id,
+      title: t.name,
+      artist: t.artists?.map(a => a.name).join(', ') ?? 'Unknown Artist',
+      album: t.album?.name,
+      durationMs: t.duration_ms,
+      imageUrl: t.album?.images?.[0]?.url,
+      externalUrl: t.external_urls?.spotify,
+    })
   }
-  return res
+  return tracks
+}
+
+function unreadablePlaylistError(playlistId: string): Error {
+  return new Error(
+    `Spotify cannot read tracks from playlist ${playlistId}. The connected account must own it or be a collaborator.`,
+  )
+}
+
+const PLAYLIST_CACHE_TTL_MS = 45_000
+
+interface CacheEntry<T> {
+  value: T
+  expiresAt: number
+}
+
+const playlistsCache = new Map<string, CacheEntry<StreamingPlaylist[]>>()
+const tracksCache = new Map<string, CacheEntry<StreamingTrack[]>>()
+const inflightTracks = new Map<string, Promise<StreamingTrack[]>>()
+const inflightPlaylists = new Map<string, Promise<StreamingPlaylist[]>>()
+
+function cacheGet<T>(map: Map<string, CacheEntry<T>>, key: string): T | undefined {
+  const entry = map.get(key)
+  if (!entry) return undefined
+  if (entry.expiresAt <= Date.now()) {
+    map.delete(key)
+    return undefined
+  }
+  return entry.value
+}
+
+function cacheSet<T>(map: Map<string, CacheEntry<T>>, key: string, value: T): void {
+  map.set(key, { value, expiresAt: Date.now() + PLAYLIST_CACHE_TTL_MS })
+}
+
+function invalidatePlaylistData(playlistId: string): void {
+  invalidateSpotifyGetCache(playlistId)
+  for (const key of [...tracksCache.keys()]) {
+    if (key.endsWith(`:${playlistId}`)) tracksCache.delete(key)
+  }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -186,8 +257,29 @@ export class SpotifyProvider implements StreamingProvider {
   // ── Playlists ──────────────────────────────────────────────────────────────
 
   async getPlaylists(userId: string): Promise<StreamingPlaylist[]> {
+    const cached = cacheGet(playlistsCache, userId)
+    if (cached) return cached
+    const pending = inflightPlaylists.get(userId)
+    if (pending) return pending
+
+    const load = this.loadPlaylists(userId).then(playlists => {
+      cacheSet(playlistsCache, userId, playlists)
+      return playlists
+    }).finally(() => inflightPlaylists.delete(userId))
+    inflightPlaylists.set(userId, load)
+    return load
+  }
+
+  private async loadPlaylists(userId: string): Promise<StreamingPlaylist[]> {
     const accessToken = await this.refreshTokenIfNeeded(userId)
+    const stored = await getTokens(userId, PROVIDER_NAME)
+    let mySpotifyId = stored?.providerUserId ?? null
+    if (!mySpotifyId) {
+      mySpotifyId = (await this._fetchMe(accessToken)).id
+    }
+
     const playlists: StreamingPlaylist[] = []
+    let skippedUnreadable = 0
     let url: string | null = 'https://api.spotify.com/v1/me/playlists?limit=50'
 
     while (url) {
@@ -204,14 +296,16 @@ export class SpotifyProvider implements StreamingProvider {
 
       for (const item of data.items) {
         if (!item?.id) continue  // skip null/empty entries
+        // GET /items 403s for followed playlists the user does not own or collaborate on.
+        if (item.owner?.id && !canReadPlaylistItems(item, mySpotifyId)) {
+          skippedUnreadable += 1
+          continue
+        }
         playlists.push({
           id: item.id,
           name: item.name,
           description: item.description ?? undefined,
-          // tracks.total from the listing endpoint is deprecated and unreliable —
-          // Spotify frequently returns 0 here even for populated playlists.
-          // We resolve accurate counts below via individual playlist calls.
-          trackCount: item.tracks?.total ?? 0,
+          trackCount: playlistTrackCount(item),
           imageUrl: item.images?.[0]?.url,
           externalUrl: item.external_urls?.spotify,
         })
@@ -220,26 +314,13 @@ export class SpotifyProvider implements StreamingProvider {
       url = data.next
     }
 
-    // The listing endpoint's tracks.total is deprecated and unreliable (often 0).
-    // For any playlist still showing 0, use the /items paging endpoint with limit=1:
-    // even fetching a single item returns an accurate `total` in the paging wrapper,
-    // unlike the deprecated tracks.total metadata field.
-    const needsCount = playlists.filter(p => p.trackCount === 0)
-    if (needsCount.length > 0) {
-      const results = await Promise.allSettled(
-        needsCount.map(p =>
-          spotifyFetch(
-            `https://api.spotify.com/v1/playlists/${encodeURIComponent(p.id)}/items?limit=1&additional_types=track`,
-            { headers: { Authorization: `Bearer ${accessToken}` } },
-          ).then(r => r.json() as Promise<{ total?: number }>),
-        ),
-      )
-      for (let i = 0; i < needsCount.length; i++) {
-        const result = results[i]
-        if (result.status === 'fulfilled' && typeof result.value.total === 'number') {
-          needsCount[i].trackCount = result.value.total
-        }
-      }
+    if (skippedUnreadable > 0) {
+      console.log(JSON.stringify({
+        level: 'info',
+        message: 'Skipped Spotify playlists the connected account cannot read',
+        userId,
+        skippedUnreadable,
+      }))
     }
 
     return playlists
@@ -248,7 +329,7 @@ export class SpotifyProvider implements StreamingProvider {
   async getPlaylist(userId: string, playlistId: string): Promise<StreamingPlaylist> {
     const accessToken = await this.refreshTokenIfNeeded(userId)
     const res = await spotifyFetch(
-      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}?fields=id,name,description,images,external_urls,tracks.total`,
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}?fields=id,name,description,images,external_urls,items.total`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     )
     if (!res.ok) {
@@ -260,69 +341,44 @@ export class SpotifyProvider implements StreamingProvider {
       id: data.id,
       name: data.name,
       description: data.description ?? undefined,
-      trackCount: data.tracks?.total ?? 0,
+      trackCount: playlistTrackCount(data),
       imageUrl: data.images?.[0]?.url,
       externalUrl: data.external_urls?.spotify,
     }
   }
 
   async getPlaylistTracks(userId: string, playlistId: string): Promise<StreamingTrack[]> {
+    const key = `${userId}:${playlistId}`
+    const cached = cacheGet(tracksCache, key)
+    if (cached) return cached
+    const pending = inflightTracks.get(key)
+    if (pending) return pending
+
+    const load = this.loadPlaylistTracks(userId, playlistId).then(tracks => {
+      cacheSet(tracksCache, key, tracks)
+      return tracks
+    }).finally(() => inflightTracks.delete(key))
+    inflightTracks.set(key, load)
+    return load
+  }
+
+  private async loadPlaylistTracks(userId: string, playlistId: string): Promise<StreamingTrack[]> {
     const accessToken = await this.refreshTokenIfNeeded(userId)
-    const tracks: StreamingTrack[] = []
+    const itemsUrl =
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=50`
 
-    // Use the current /items endpoint (not the deprecated /tracks endpoint).
-    // The /items endpoint returns audio content in the `item` field; `track` is deprecated.
-    let url: string | null =
-      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items` +
-      `?limit=50&additional_types=track`
-
-    while (url) {
-      const res = await spotifyFetch(url, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-
-      if (!res.ok) {
-        const body = await res.text()
-        throw new Error(`Spotify getPlaylistTracks failed (${res.status}): ${body}`)
-      }
-
-      const raw = await res.json() as unknown
-      const data = raw as SpotifyPlaylistItemsResponse
-
+    try {
+      return await this.fetchItemPages(accessToken, itemsUrl, playlistId)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (!message.includes('(403)')) throw err
       console.log(JSON.stringify({
-        level: 'debug',
-        message: 'Spotify items page',
+        level: 'warn',
+        message: 'Spotify /items forbidden; falling back to playlist document',
         playlistId,
-        total: (raw as Record<string, unknown>)['total'],
-        itemCount: Array.isArray(data.items) ? data.items.length : 'not-array',
-        nextPresent: !!data.next,
       }))
-
-      if (!Array.isArray(data.items)) {
-        console.log(JSON.stringify({ level: 'warn', message: 'Spotify items response missing items array', raw: JSON.stringify(raw as Record<string, unknown>).slice(0, 500) }))
-        break
-      }
-
-      for (const item of data.items) {
-        // `item.item` is the current field; fall back to deprecated `item.track`
-        const audioObj = item.item ?? item.track
-        if (!audioObj) continue                  // null = local file
-        if (audioObj.type !== 'track') continue  // skip podcast episodes
-        const t = audioObj as SpotifyTrackObject
-        if (!t.id) continue
-        tracks.push({
-          id: t.id,
-          title: t.name,
-          artist: t.artists?.map(a => a.name).join(', ') ?? 'Unknown Artist',
-          album: t.album?.name,
-          durationMs: t.duration_ms,
-          imageUrl: t.album?.images?.[0]?.url,
-          externalUrl: t.external_urls?.spotify,
-        })
-      }
-      url = data.next
+      return this.fetchTracksFromPlaylistDocument(accessToken, playlistId)
     }
-    return tracks
   }
 
   // ── Token management ───────────────────────────────────────────────────────
@@ -376,6 +432,8 @@ export class SpotifyProvider implements StreamingProvider {
       added += batch.length
     }
 
+    invalidatePlaylistData(playlistId)
+    playlistsCache.delete(userId)
     return { added }
   }
 
@@ -402,14 +460,105 @@ export class SpotifyProvider implements StreamingProvider {
       written += batch.length
     }
 
+    invalidatePlaylistData(playlistId)
+    playlistsCache.delete(userId)
     return { written }
   }
 
   async disconnect(userId: string): Promise<void> {
+    playlistsCache.delete(userId)
+    for (const key of [...tracksCache.keys()]) {
+      if (key.startsWith(`${userId}:`)) tracksCache.delete(key)
+    }
     await deleteTokens(userId, PROVIDER_NAME)
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
+
+  private async fetchItemPages(
+    accessToken: string,
+    firstUrl: string,
+    playlistId: string,
+  ): Promise<StreamingTrack[]> {
+    const tracks: StreamingTrack[] = []
+    let url: string | null = firstUrl
+
+    while (url) {
+      const res = await spotifyFetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`Spotify getPlaylistTracks failed (${res.status}): ${body}`)
+      }
+
+      const raw = await res.json() as unknown
+      const data = raw as SpotifyPlaylistItemsResponse
+
+      console.log(JSON.stringify({
+        level: 'debug',
+        message: 'Spotify items page',
+        playlistId,
+        total: (raw as Record<string, unknown>)['total'],
+        itemCount: Array.isArray(data.items) ? data.items.length : 'not-array',
+        nextPresent: !!data.next,
+      }))
+
+      if (!Array.isArray(data.items)) {
+        console.log(JSON.stringify({
+          level: 'warn',
+          message: 'Spotify items response missing items array',
+          playlistId,
+          raw: JSON.stringify(raw as Record<string, unknown>).slice(0, 500),
+        }))
+        break
+      }
+
+      tracks.push(...tracksFromPaging(data))
+      url = data.next
+    }
+
+    return tracks
+  }
+
+  /**
+   * GET /playlists/{id} still returns metadata when /items 403s. Owned and
+   * collaborative playlists include a nested items page we can use.
+   */
+  private async fetchTracksFromPlaylistDocument(
+    accessToken: string,
+    playlistId: string,
+  ): Promise<StreamingTrack[]> {
+    const res = await spotifyFetch(
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    )
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`Spotify getPlaylistTracks failed (${res.status}): ${body}`)
+    }
+
+    const data = (await res.json()) as SpotifyPlaylistItem
+    const paging = asItemPaging(data.items) ?? asItemPaging(data.tracks)
+    if (!paging) throw unreadablePlaylistError(playlistId)
+
+    const tracks = tracksFromPaging(paging)
+    if (paging.next) {
+      try {
+        tracks.push(...await this.fetchItemPages(accessToken, paging.next, playlistId))
+      } catch (err) {
+        console.log(JSON.stringify({
+          level: 'warn',
+          message: 'Spotify playlist document next page failed; returning first page',
+          playlistId,
+          error: err instanceof Error ? err.message : String(err),
+        }))
+      }
+    }
+
+    return tracks
+  }
 
   /** POST appends items; PUT replaces the playlist with the given URIs. */
   private async writePlaylistItems(
@@ -484,7 +633,7 @@ export class SpotifyProvider implements StreamingProvider {
   }
 
   private async _fetchMe(accessToken: string): Promise<SpotifyMeResponse> {
-    const res = await fetch('https://api.spotify.com/v1/me', {
+    const res = await spotifyFetch('https://api.spotify.com/v1/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
 
