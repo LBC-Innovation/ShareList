@@ -295,6 +295,11 @@ export class AppleMusicProvider implements StreamingProvider {
     throw new Error('addTracksToPlaylist is not yet implemented for Apple Music')
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async replacePlaylistTracks(_userId: string, _playlistId: string, _trackIds: string[]): Promise<{ written: number }> {
+    throw new Error('replacePlaylistTracks is not yet implemented for Apple Music')
+  }
+
   async disconnect(userId: string): Promise<void> {
     await deleteTokens(userId, PROVIDER_NAME)
   }

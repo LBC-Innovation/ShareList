@@ -20,6 +20,7 @@ import { requireAuth } from '../middleware/auth'
 import { supabaseAdmin, supabaseAuth } from '../lib/supabase'
 import { getProvider } from '../streaming/registry'
 import { runCrossSync } from '../services/crossSync'
+import { applyShuffledOrder } from '../services/shuffle'
 import { getAccessibleSharelist, listAccessibleSharelists } from '../lib/sharelistAccess'
 
 // Side-effect: ensure providers are registered
@@ -602,6 +603,43 @@ router.post('/:id/cross-sync', requireAuth, async (req: Request, res: Response) 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'POST /sharelists/:id/cross-sync failed', { id, userId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
+// ── POST /sharelists/:id/shuffle ─────────────────────────────────────────────
+//
+// Applies a client-shuffled track order to every linked playlist. Each playlist
+// keeps its own songs; those songs are rewritten in the given relative order.
+
+router.post('/:id/shuffle', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const { id } = req.params as { id: string }
+
+  try {
+    const list = await getAccessibleSharelist(userId, id)
+    if (!list) {
+      res.status(404).json({ data: null, error: { message: 'ShareList not found' } })
+      return
+    }
+
+    const orderedTrackIds = Array.isArray(req.body?.trackIds)
+      ? (req.body.trackIds as unknown[]).filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : []
+
+    if (orderedTrackIds.length === 0) {
+      res.status(400).json({ data: null, error: { message: 'trackIds must be a non-empty array of strings' } })
+      return
+    }
+
+    log('info', 'shuffle started', { sharelistId: id, userId, trackCount: orderedTrackIds.length })
+    const result = await applyShuffledOrder(id, orderedTrackIds)
+    log('info', 'shuffle complete', { sharelistId: id, userId, totalWritten: result.totalWritten })
+
+    res.json({ data: result, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'POST /sharelists/:id/shuffle failed', { id, userId, error: message })
     res.status(500).json({ data: null, error: { message } })
   }
 })

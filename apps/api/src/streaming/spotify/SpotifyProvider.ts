@@ -390,6 +390,66 @@ export class SpotifyProvider implements StreamingProvider {
     return { added }
   }
 
+  /**
+   * Replaces a playlist's items with `trackIds` in order.
+   * PUT accepts at most 100 URIs; remaining tracks are appended in batches.
+   */
+  async replacePlaylistTracks(
+    userId: string,
+    playlistId: string,
+    trackIds: string[],
+  ): Promise<{ written: number }> {
+    if (trackIds.length === 0) return { written: 0 }
+
+    const accessToken = await this.refreshTokenIfNeeded(userId)
+    const BATCH_SIZE = 100
+    const first = trackIds.slice(0, BATCH_SIZE)
+    const uris = first.map(id => `spotify:track:${id}`)
+
+    const replaceRes = await spotifyFetch(
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uris }),
+      },
+    )
+
+    if (!replaceRes.ok) {
+      const body = await replaceRes.text()
+      throw new Error(`Spotify replacePlaylistTracks failed (${replaceRes.status}): ${body}`)
+    }
+
+    let written = first.length
+
+    for (let i = BATCH_SIZE; i < trackIds.length; i += BATCH_SIZE) {
+      const batch = trackIds.slice(i, i + BATCH_SIZE)
+      const addRes = await spotifyFetch(
+        `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ uris: batch.map(id => `spotify:track:${id}`) }),
+        },
+      )
+
+      if (!addRes.ok) {
+        const body = await addRes.text()
+        throw new Error(`Spotify replacePlaylistTracks append failed (${addRes.status}): ${body}`)
+      }
+
+      written += batch.length
+    }
+
+    return { written }
+  }
+
   async disconnect(userId: string): Promise<void> {
     await deleteTokens(userId, PROVIDER_NAME)
   }
