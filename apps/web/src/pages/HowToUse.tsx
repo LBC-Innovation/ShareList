@@ -1,4 +1,4 @@
-import { Layout, Typography, Flex, Table, Tag } from 'antd'
+import { Layout, Typography, Flex, Table, Tag, Grid } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 
 const { Content } = Layout
@@ -207,8 +207,11 @@ function definitionColumns(): ColumnsType<DefinitionRow> {
 }
 
 export function HowToUse() {
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
+
   return (
-    <Content style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px 48px', width: '100%' }}>
+    <Content style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 16px 28px', width: '100%' }}>
       <Flex vertical gap={8} style={{ marginBottom: 28 }}>
         <Text style={{
           fontSize: 11,
@@ -318,14 +321,44 @@ export function HowToUse() {
                 {group.hint}
               </Tag>
             </Flex>
-            <Table
-              dataSource={group.rows}
-              columns={definitionColumns()}
-              rowKey="key"
-              pagination={false}
-              size="middle"
-              style={{ background: 'transparent' }}
-            />
+            {isCompact ? (
+              <Flex vertical>
+                {group.rows.map((row, index) => (
+                  <div
+                    key={row.key}
+                    style={{
+                      padding: '14px 16px',
+                      borderTop: index === 0 ? 'none' : `1px solid ${SL.border}`,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: row.accent === 'mint' ? SL.mint : row.accent === 'accent' ? SL.accent : SL.text,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        letterSpacing: '-0.2px',
+                        display: 'block',
+                        marginBottom: 6,
+                      }}
+                    >
+                      {row.term}
+                    </Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 13, lineHeight: 1.6 }}>
+                      {row.meaning}
+                    </Text>
+                  </div>
+                ))}
+              </Flex>
+            ) : (
+              <Table
+                dataSource={group.rows}
+                columns={definitionColumns()}
+                rowKey="key"
+                pagination={false}
+                size="middle"
+                style={{ background: 'transparent' }}
+              />
+            )}
           </div>
         ))}
       </Flex>

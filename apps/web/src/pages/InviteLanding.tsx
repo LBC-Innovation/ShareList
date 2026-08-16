@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button, Card, Flex, Typography, Alert, Spin } from 'antd'
-import { Music2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { AuthShell } from '../components/AuthShell'
+import { BrandLogo } from '../components/BrandLogo'
 import * as api from '../lib/api'
 import type { InvitePreview } from '../lib/api'
 
 const { Title, Text } = Typography
 
 const SL = {
-  bg: '#111314', surface: '#1C1F21', accent: '#38BDF8', mint: '#4ADE80',
+  accent: '#38BDF8', mint: '#4ADE80',
   text: '#F1F5F9', muted: '#64748B',
 }
 
@@ -52,20 +53,13 @@ export function InviteLanding() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: SL.bg,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      position: 'relative',
-    }}>
+    <AuthShell>
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.12) 0%, rgba(74, 222, 128, 0.08) 40%, transparent 70%)',
       }} />
       <Card
+        className="sl-auth-card"
         style={{
           maxWidth: '440px', width: '100%', borderRadius: '24px',
           background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(28, 31, 33, 0.95) 50%)',
@@ -75,13 +69,7 @@ export function InviteLanding() {
         styles={{ body: { padding: '40px 32px' } }}
       >
         <Flex justify="center" style={{ marginBottom: '20px' }}>
-          <Flex align="center" gap={12}>
-            <Music2 style={{ width: '28px', height: '28px', color: SL.mint, strokeWidth: 2.5 }} />
-            <div style={{ fontSize: '24px' }}>
-              <span style={{ fontWeight: 300, color: 'white' }}>Share</span>
-              <span style={{ fontWeight: 700, color: SL.mint }}>List</span>
-            </div>
-          </Flex>
+          <BrandLogo height={40} />
         </Flex>
 
         {authLoading && (
@@ -146,6 +134,6 @@ export function InviteLanding() {
           </>
         )}
       </Card>
-    </div>
+    </AuthShell>
   )
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, Flex, Spin, Typography, Alert } from 'antd'
-import { Music2 } from 'lucide-react'
 import { storeToken } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { AuthShell } from '../components/AuthShell'
+import { BrandLogo } from '../components/BrandLogo'
 
 const { Text } = Typography
 
@@ -34,16 +35,7 @@ export function MagicLinkConfirm() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#111314',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-    }}>
+    <AuthShell>
       {/* Background gradient */}
       <div style={{
         position: 'absolute',
@@ -56,6 +48,7 @@ export function MagicLinkConfirm() {
       }} />
 
       <Card
+        className="sl-auth-card"
         style={{
           maxWidth: '440px',
           width: '100%',
@@ -68,18 +61,8 @@ export function MagicLinkConfirm() {
         }}
         styles={{ body: { padding: '48px 40px', textAlign: 'center' } }}
       >
-        {/* Logo */}
         <Flex justify="center" style={{ marginBottom: '32px' }}>
-          <Flex align="center" gap={12}>
-            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-              <Music2 style={{ width: '30px', height: '30px', color: '#38BDF8', position: 'absolute', top: 1, left: 1, strokeWidth: 2.5 }} />
-              <Music2 style={{ width: '30px', height: '30px', color: '#38BDF8', position: 'absolute', top: 3, left: 3, opacity: 0.5, strokeWidth: 2.5 }} />
-            </div>
-            <div style={{ fontSize: '28px', lineHeight: 1 }}>
-              <span style={{ fontWeight: 300, color: 'white' }}>Share</span>
-              <span style={{ fontWeight: 700, color: '#38BDF8' }}>List</span>
-            </div>
-          </Flex>
+          <BrandLogo height={40} />
         </Flex>
 
         {error ? (
@@ -109,6 +92,6 @@ export function MagicLinkConfirm() {
           </Flex>
         )}
       </Card>
-    </div>
+    </AuthShell>
   )
 }

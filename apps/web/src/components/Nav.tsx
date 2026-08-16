@@ -1,6 +1,7 @@
 import { Button, Flex, Typography } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { BrandLogo } from './BrandLogo'
 
 const SL = {
   nav: '#161819',
@@ -31,13 +32,8 @@ export function Nav() {
       }}
     >
       <Flex align="center" justify="space-between">
-        <Link to="/" style={{ textDecoration: 'none' }}>
-          <Typography.Text style={{ fontWeight: 300, color: SL.text, fontSize: 16 }}>
-            Share
-          </Typography.Text>
-          <Typography.Text style={{ fontWeight: 700, color: SL.accent, fontSize: 16 }}>
-            List
-          </Typography.Text>
+        <Link to="/" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+          <BrandLogo height={24} />
         </Link>
 
         <Flex align="center" gap={20}>

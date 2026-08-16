@@ -16,6 +16,7 @@ import { Friends } from './pages/Friends'
 import { InviteLanding } from './pages/InviteLanding'
 import { Settings } from './pages/Settings'
 import { HowToUse } from './pages/HowToUse'
+import { InstallBanner } from './components/InstallBanner'
 
 const SL = {
   bg: '#111314',
@@ -97,6 +98,7 @@ function App() {
           <Route path="/settings/streaming" element={<Settings />} />
         </Route>
       </Routes>
+      <InstallBanner />
     </ConfigProvider>
   )
 }

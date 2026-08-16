@@ -109,7 +109,7 @@ export function CreateShareList() {
   const selectedPlaylistData = playlists.find(p => p.id === selectedPlaylist)
 
   return (
-    <Content style={{ padding: '88px 24px 100px', width: '100%', maxWidth: '640px', margin: '0 auto' }}>
+    <Content style={{ padding: '24px 16px 28px', width: '100%', maxWidth: '640px', margin: '0 auto' }}>
       {contextHolder}
 
       {/* Header */}
@@ -124,7 +124,7 @@ export function CreateShareList() {
         }}>
           <LinkOutlined />
         </div>
-        <Title level={1} style={{ color: '#F1F5F9', margin: '0 0 8px', fontSize: '32px', fontWeight: 700, letterSpacing: '-0.5px' }}>
+        <Title level={1} style={{ color: '#F1F5F9', margin: '0 0 8px', fontSize: '26px', fontWeight: 700, letterSpacing: '-0.5px' }}>
           New ShareList
         </Title>
         <Text style={{ color: '#94A3B8', fontSize: '15px' }}>
@@ -134,7 +134,7 @@ export function CreateShareList() {
 
       <Card
         style={{ background: 'rgba(28, 31, 33, 0.4)', border: '1px solid rgba(56, 189, 248, 0.15)', borderRadius: '16px', backdropFilter: 'blur(20px)' }}
-        styles={{ body: { padding: '32px' } }}
+        styles={{ body: { padding: '20px' } }}
       >
         {/* Loading services */}
         {servicesLoading && (

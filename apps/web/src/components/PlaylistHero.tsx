@@ -49,7 +49,8 @@ function ContributingAccordion({ links }: { links: HeroLink[] }) {
           background: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          padding: '4px 0',
+          padding: '10px 0',
+          minHeight: 44,
         }}
       >
         <span style={{
@@ -192,7 +193,7 @@ export function PlaylistHero({ name, trackCount, links, isLoading = false }: Pla
             </>
           ) : (
             <>
-              <h1 style={{ color: '#F1F5F9', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: '1.2', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <h1 style={{ color: '#F1F5F9', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: '1.2', margin: '0 0 4px 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 {name}
               </h1>
               <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 400, lineHeight: '1.4', margin: 0 }}>

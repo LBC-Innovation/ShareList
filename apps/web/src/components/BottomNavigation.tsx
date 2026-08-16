@@ -22,17 +22,9 @@ export function BottomNavigation() {
   ]
 
   return (
-    <nav style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      background: '#161819',
-      borderTop: '1px solid #2A2D30',
-      zIndex: 50,
-    }}>
+    <nav className="sl-bottom-nav">
       <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-        <Flex justify="space-around" align="center" style={{ padding: '8px 0' }}>
+        <Flex justify="space-around" align="center" style={{ padding: '6px 0 4px' }}>
           {navItems.map((item) => {
             const Icon = item.icon
             return (
@@ -44,11 +36,11 @@ export function BottomNavigation() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px',
-                  padding: '8px 16px',
+                  padding: '6px 10px',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  minWidth: 0,
+                  minWidth: 44,
                 }}
               >
                 <Icon
@@ -63,6 +55,7 @@ export function BottomNavigation() {
                   color: item.active ? '#38BDF8' : '#64748B',
                   fontSize: '10px',
                   fontWeight: item.active ? 600 : 500,
+                  whiteSpace: 'nowrap',
                 }}>
                   {item.label}
                 </span>
