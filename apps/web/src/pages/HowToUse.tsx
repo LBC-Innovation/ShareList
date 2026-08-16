@@ -48,6 +48,11 @@ const STEPS: Step[] = [
   },
   {
     n: '07',
+    title: 'Shuffle the songs',
+    body: 'On a ShareList, tap Shuffle above the song list. The songs rearrange with a short animation, then ShareList writes that new order to the linked playlists on Spotify or Apple Music.',
+  },
+  {
+    n: '08',
     title: 'Leave or delete without wiping friends',
     body: "Manage List lets you unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
   },
@@ -139,6 +144,11 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
         key: 'unique-songs',
         term: 'Unique songs',
         meaning: "In the app, a song that exists in more than one linked playlist is shown once. After Sync Lists the same track may still live in each person's Spotify or Apple playlist - that is expected.",
+      },
+      {
+        key: 'shuffle',
+        term: 'Shuffle',
+        meaning: 'Randomly reorders the songs you see, then writes that new order to the linked playlists.',
       },
     ],
   },

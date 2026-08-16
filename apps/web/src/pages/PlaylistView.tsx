@@ -21,6 +21,42 @@ function formatDuration(ms: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+function shuffleTracks(list: Track[]): Track[] {
+  const next = [...list]
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const current = next[i]
+    const swap = next[j]
+    if (current === undefined || swap === undefined) continue
+    next[i] = swap
+    next[j] = current
+  }
+  return next
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function mapSharelistTracks(sharelist: ShareListDetail | null): Track[] {
+  const tracks: Track[] = []
+  const seen = new Set<string>()
+  for (const t of sharelist?.tracks ?? []) {
+    const key = `${t.provider ?? ''}::${t.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    tracks.push({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      duration: formatDuration(t.durationMs),
+      albumArt: t.imageUrl,
+      platform: t.provider as Track['platform'] | undefined,
+    })
+  }
+  return tracks
+}
+
 export function PlaylistView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -33,6 +69,8 @@ export function PlaylistView() {
   const [lastSynced, setLastSynced]       = useState<Date | null>(null)
   const [error, setError]                 = useState<string | null>(null)
   const [showLinkModal, setShowLinkModal] = useState(false)
+  const [displayTracks, setDisplayTracks] = useState<Track[]>([])
+  const [shuffling, setShuffling]         = useState(false)
 
   const loadShareList = async () => {
     if (!id) return
@@ -109,28 +147,64 @@ export function PlaylistView() {
     void loadShareList()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    setDisplayTracks(mapSharelistTracks(sharelist))
+  }, [sharelist])
+
+  const handleShuffle = async () => {
+    if (!id || shuffling || displayTracks.length < 2) return
+    setShuffling(true)
+    let latest = displayTracks
+    try {
+      for (let frame = 0; frame < 10; frame++) {
+        latest = shuffleTracks(latest)
+        setDisplayTracks(latest)
+        await wait(90)
+      }
+
+      const result = await api.shuffleShareList(id, latest.map(track => track.id))
+      if (api.isError(result)) {
+        notifyApi.error({
+          message: 'Shuffle synced locally, but remote playlists were not updated',
+          description: result.error.message,
+          placement: 'topRight',
+        })
+        return
+      }
+
+      const linkErrors = result.data.links.filter(link => link.error)
+      if (linkErrors.length > 0 && result.data.totalWritten === 0) {
+        notifyApi.error({
+          message: 'Could not update linked playlists',
+          description: linkErrors.map(link => `${link.playlistName}: ${link.error}`).join('\n'),
+          placement: 'topRight',
+          duration: 8,
+        })
+      } else if (linkErrors.length > 0) {
+        notifyApi.warning({
+          message: 'Shuffled, with some playlist updates skipped',
+          description: linkErrors.map(link => `${link.playlistName}: ${link.error}`).join('\n'),
+          placement: 'topRight',
+          duration: 8,
+        })
+      } else {
+        notifyApi.success({
+          message: 'Shuffled',
+          description: 'Linked playlists were updated with the new order.',
+          placement: 'topRight',
+        })
+      }
+    } finally {
+      setShuffling(false)
+    }
+  }
+
   if (!id) {
     navigate('/')
     return null
   }
 
   const primaryLink = sharelist?.links.find(l => l.isPrimary) ?? sharelist?.links[0] ?? null
-
-  const tracks: Track[] = []
-  const seen = new Set<string>()
-  for (const t of sharelist?.tracks ?? []) {
-    const key = `${t.provider ?? ''}::${t.id}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    tracks.push({
-      id: t.id,
-      title: t.title,
-      artist: t.artist,
-      duration: formatDuration(t.durationMs),
-      albumArt: t.imageUrl,
-      platform: t.provider as Track['platform'] | undefined,
-    })
-  }
 
   const heroLinks = (sharelist?.links ?? []).map(l => ({
     provider: l.provider,
@@ -155,7 +229,7 @@ export function PlaylistView() {
       <div style={{ marginBottom: '16px' }}>
         <PlaylistHero
           name={sharelist?.name ?? ''}
-          trackCount={tracks.length}
+          trackCount={displayTracks.length}
           links={heroLinks}
           onManageList={() => setShowLinkModal(true)}
           isLoading={isLoading}
@@ -192,7 +266,7 @@ export function PlaylistView() {
           </Flex>
         </Card>
       ) : (
-        !error && tracks.length === 0 ? (
+        !error && displayTracks.length === 0 ? (
           <Card
             style={{ background: 'rgba(28, 31, 33, 0.4)', border: '1px solid rgba(56, 189, 248, 0.1)', borderRadius: '16px', textAlign: 'center' }}
             styles={{ body: { padding: '48px 20px' } }}
@@ -201,7 +275,7 @@ export function PlaylistView() {
             <Text style={{ color: '#64748B', fontSize: '14px' }}>No tracks found for this playlist.</Text>
           </Card>
         ) : (
-          <TrackList tracks={tracks} />
+          <TrackList tracks={displayTracks} shuffling={shuffling} onShuffle={() => void handleShuffle()} />
         )
       )}
 
