@@ -2,6 +2,14 @@
 
 Cross-platform music playlist sharing. Connect Spotify, Apple Music, or YouTube Music and share playlists across platforms — no matter which service your friends use.
 
+
+<center>
+  <img style="width: 320px;" alt="image" src="https://github.com/user-attachments/assets/17b86e86-17a7-43de-9218-aa9ac663dad3" />
+  <img style="width: 320px;" alt="image" src="https://github.com/user-attachments/assets/263733ad-5d5a-4ce8-8c40-8d175e796a8c" />
+  <img style="width: 320px;" alt="image" src="https://github.com/user-attachments/assets/283a8377-f665-4aa3-a272-8d33c6bf6ea2" />
+</center>
+
+
 ## Quick start
 
 ```bash
