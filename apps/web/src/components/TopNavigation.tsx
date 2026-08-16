@@ -1,10 +1,10 @@
 import { Badge, Dropdown, Flex } from 'antd'
 import { BellOutlined, UserOutlined, LogoutOutlined, QuestionCircleOutlined } from '@ant-design/icons'
-import { Music2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { MenuProps } from 'antd'
 import { UserAvatar } from './UserAvatar'
+import { BrandLogo } from './BrandLogo'
 
 export function TopNavigation() {
   const navigate = useNavigate()
@@ -53,22 +53,11 @@ export function TopNavigation() {
     <nav className="sl-top-nav">
       <div style={{ maxWidth: '960px', margin: '0 auto' }}>
         <Flex justify="space-between" align="center">
-          {/* Logo */}
-          <Flex
-            align="center"
-            gap={8}
-            style={{ cursor: 'pointer' }}
+          <BrandLogo
+            height={26}
+            responsive
             onClick={() => navigate('/')}
-          >
-            <div style={{ position: 'relative', width: '24px', height: '24px' }}>
-              <Music2 style={{ width: '20px', height: '20px', color: '#38BDF8', position: 'absolute', top: 1, left: 1 }} />
-              <Music2 style={{ width: '20px', height: '20px', color: '#38BDF8', position: 'absolute', top: 3, left: 3, opacity: 0.5 }} />
-            </div>
-            <Flex align="baseline" className="sl-brand-text">
-              <span style={{ color: 'white', fontWeight: 300, fontSize: '18px', letterSpacing: '-0.3px' }}>Share</span>
-              <span style={{ color: '#38BDF8', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.3px' }}>List</span>
-            </Flex>
-          </Flex>
+          />
 
           {/* Right side */}
           <Flex align="center" gap={16}>

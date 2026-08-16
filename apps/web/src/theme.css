@@ -168,17 +168,6 @@ input {
   bottom: max(12px, var(--sl-safe-bottom));
 }
 
-.sl-install-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%);
-}
-
 .sl-install-steps {
   margin: 10px 0 0;
   padding-left: 18px;
@@ -203,9 +192,22 @@ input {
   overflow: auto;
 }
 
+.sl-brand-wordmark,
+.sl-brand-mark {
+  display: block;
+}
+
+.sl-brand .sl-brand-mark {
+  display: none;
+}
+
 @media (max-width: 360px) {
-  .sl-brand-text {
+  .sl-brand .sl-brand-wordmark {
     display: none;
+  }
+
+  .sl-brand .sl-brand-mark {
+    display: block;
   }
 }
 

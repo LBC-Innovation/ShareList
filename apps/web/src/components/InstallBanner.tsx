@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Button, Flex, Typography } from 'antd'
-import { Download, Share, X } from 'lucide-react'
+import { Share, X } from 'lucide-react'
 import { usePwaInstall } from '../hooks/usePwaInstall'
+import { BrandLogo } from './BrandLogo'
 
 const { Text } = Typography
 
@@ -41,9 +42,7 @@ export function InstallBanner() {
       aria-label="Install ShareList"
     >
       <Flex align="flex-start" gap={12}>
-        <div className="sl-install-icon">
-          <Download style={{ width: 18, height: 18, color: '#FFFFFF' }} />
-        </div>
+        <BrandLogo variant="icon" height={36} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: '#F1F5F9', fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 2 }}>
             {ios ? 'Add ShareList to your Home Screen' : 'Install ShareList'}

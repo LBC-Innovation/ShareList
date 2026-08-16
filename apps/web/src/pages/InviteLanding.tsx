@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button, Card, Flex, Typography, Alert, Spin } from 'antd'
-import { Music2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { AuthShell } from '../components/AuthShell'
+import { BrandLogo } from '../components/BrandLogo'
 import * as api from '../lib/api'
 import type { InvitePreview } from '../lib/api'
 
@@ -69,13 +69,7 @@ export function InviteLanding() {
         styles={{ body: { padding: '40px 32px' } }}
       >
         <Flex justify="center" style={{ marginBottom: '20px' }}>
-          <Flex align="center" gap={12}>
-            <Music2 style={{ width: '28px', height: '28px', color: SL.mint, strokeWidth: 2.5 }} />
-            <div style={{ fontSize: '24px' }}>
-              <span style={{ fontWeight: 300, color: 'white' }}>Share</span>
-              <span style={{ fontWeight: 700, color: SL.mint }}>List</span>
-            </div>
-          </Flex>
+          <BrandLogo height={40} />
         </Flex>
 
         {authLoading && (

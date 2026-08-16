@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Flex, Form, Input, Typography, Alert } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
-import { Music2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { AuthShell } from '../components/AuthShell'
+import { BrandLogo } from '../components/BrandLogo'
 import * as api from '../lib/api'
 
 const { Title, Text, Link } = Typography
@@ -68,16 +68,7 @@ export function SignIn() {
       >
         {/* Logo */}
         <Flex justify="center" style={{ marginBottom: '20px' }}>
-          <Flex align="center" gap={12}>
-            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-              <Music2 style={{ width: '30px', height: '30px', color: '#38BDF8', position: 'absolute', top: 1, left: 1, strokeWidth: 2.5 }} />
-              <Music2 style={{ width: '30px', height: '30px', color: '#38BDF8', position: 'absolute', top: 3, left: 3, opacity: 0.5, strokeWidth: 2.5 }} />
-            </div>
-            <div style={{ fontSize: '28px', lineHeight: 1 }}>
-              <span style={{ fontWeight: 300, color: 'white' }}>Share</span>
-              <span style={{ fontWeight: 700, color: '#38BDF8' }}>List</span>
-            </div>
-          </Flex>
+          <BrandLogo height={40} />
         </Flex>
 
         {/* Heading */}

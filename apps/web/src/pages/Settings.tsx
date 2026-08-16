@@ -14,8 +14,9 @@ import { LinkOutlined, DisconnectOutlined, CheckOutlined, ExclamationCircleOutli
 import * as api from '../lib/api'
 import type { ConnectedService, StreamingProvider } from '../lib/api'
 import { LinkServiceModal } from '../components/LinkServiceModal'
+import { BrandLogo } from '../components/BrandLogo'
 import { usePwaInstall } from '../hooks/usePwaInstall'
-import { Download, Share } from 'lucide-react'
+import { Share } from 'lucide-react'
 
 const { Content } = Layout
 const { Title, Text } = Typography
@@ -318,13 +319,7 @@ export function Settings() {
       >
         <Flex vertical={isCompact} align={isCompact ? 'stretch' : 'center'} justify="space-between" gap={14}>
           <Flex align="center" gap={14} style={{ minWidth: 0 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-              background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Download style={{ width: 20, height: 20, color: '#FFFFFF' }} />
-            </div>
+            <BrandLogo variant="icon" height={44} />
             <div style={{ minWidth: 0 }}>
               <Text style={{ color: SL.text, fontSize: 15, fontWeight: 600, display: 'block', marginBottom: 3 }}>
                 {installed ? 'Installed on this device' : 'Install ShareList'}
