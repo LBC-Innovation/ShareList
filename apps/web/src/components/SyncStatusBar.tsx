@@ -1,4 +1,4 @@
-import { Badge, Button, Flex, Skeleton } from 'antd'
+import { Button, Flex, Skeleton } from 'antd'
 import { SyncOutlined, SwapOutlined } from '@ant-design/icons'
 
 interface SyncStatusBarProps {
@@ -24,31 +24,16 @@ function formatLastSynced(date: Date): string {
 export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing = false, lastSynced, onSync, onCrossSync }: SyncStatusBarProps) {
   if (isLoading) {
     return (
-      <Flex justify="space-between" align="center" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-        <Flex align="center" gap={8}>
-          <Skeleton.Avatar active size={10} style={{ background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%' }} />
-          <Skeleton.Input active size="small" style={{ width: '72px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-        </Flex>
+      <Flex justify="space-between" align="center" gap={12} style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
         <Skeleton.Button active size="small" style={{ width: '160px', height: '20px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+        <Skeleton.Input active size="small" style={{ width: '120px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
       </Flex>
     )
   }
 
   return (
-    <Flex justify="space-between" align="center" style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
-      <Flex align="center" gap={8}>
-        <Badge status="processing" color="#4ADE80" />
-        {lastSynced && !syncing && (
-          <span style={{ color: '#64748B', fontSize: '12px' }}>{formatLastSynced(lastSynced)}</span>
-        )}
-        {syncing && (
-          <span style={{ color: '#38BDF8', fontSize: '12px' }}>syncing…</span>
-        )}
-        {crossSyncing && !syncing && (
-          <span style={{ color: '#4ADE80', fontSize: '12px' }}>cross-syncing…</span>
-        )}
-      </Flex>
-      <Flex align="center" gap={12}>
+    <Flex justify="space-between" align="center" gap={12} style={{ padding: '12px 16px', background: 'rgba(28, 31, 33, 0.3)', borderRadius: '8px' }}>
+      <Flex align="center" gap={12} wrap="wrap" style={{ minWidth: 0 }}>
         <Button
           type="text"
           size="small"
@@ -69,7 +54,19 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
         >
           {syncing ? '' : 'Force Sync'}
         </Button>
+        {syncing && (
+          <span style={{ color: '#38BDF8', fontSize: '12px' }}>syncing…</span>
+        )}
+        {crossSyncing && !syncing && (
+          <span style={{ color: '#4ADE80', fontSize: '12px' }}>cross-syncing…</span>
+        )}
       </Flex>
+      {lastSynced && (
+        <span style={{ color: '#64748B', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          Last Synced{' '}
+          <span style={{ color: '#94A3B8', fontWeight: 500 }}>{formatLastSynced(lastSynced)}</span>
+        </span>
+      )}
     </Flex>
   )
 }
