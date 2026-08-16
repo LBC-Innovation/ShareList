@@ -29,12 +29,14 @@ interface UserManagementPanelProps {
 export function UserManagementPanel({ user, onClose, onUpdate, onDelete }: UserManagementPanelProps) {
   const [profileForm] = Form.useForm()
   const [passwordForm] = Form.useForm()
+  const [emailForm] = Form.useForm()
   const [localUser, setLocalUser] = useState<AdminUser>(user)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
 
   const [loadingStates, setLoadingStates] = useState({
     saveProfile: false,
+    saveEmail: false,
     verifyEmail: false,
     revokeVerification: false,
     sendMagicLink: false,
@@ -65,6 +67,16 @@ export function UserManagementPanel({ user, onClose, onUpdate, onDelete }: UserM
     if (api.isError(result)) { setResult('saveProfile', 'error'); clearResult('saveProfile', 2000); return }
     patch({ displayName: values.displayName, avatarUrl: values.avatarUrl ?? null })
     setResult('saveProfile', 'success'); clearResult('saveProfile', 2000)
+  }
+
+  const handleSaveEmail = async (values: { email: string }) => {
+    setLoading('saveEmail', true); setResult('saveEmail', null)
+    const result = await api.adminUpdateUserEmail(localUser.id, values.email.trim())
+    setLoading('saveEmail', false)
+    if (api.isError(result)) { setResult('saveEmail', 'error'); clearResult('saveEmail', 2000); return }
+    patch({ email: result.data.email })
+    emailForm.setFieldsValue({ email: result.data.email })
+    setResult('saveEmail', 'success'); clearResult('saveEmail', 2000)
   }
 
   const handleVerifyEmail = async () => {
@@ -271,7 +283,7 @@ export function UserManagementPanel({ user, onClose, onUpdate, onDelete }: UserM
 
           {/* Email verification */}
           <div style={{ padding: '16px', background: 'rgba(28, 31, 33, 0.4)', borderRadius: '12px', border: '1px solid rgba(42, 45, 48, 0.6)', marginBottom: '12px' }}>
-            <Flex justify="space-between" align="center">
+            <Flex justify="space-between" align="center" style={{ marginBottom: '12px' }}>
               <div>
                 <Text style={{ color: '#F1F5F9', fontSize: '14px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Email Verification</Text>
                 <Flex align="center" gap={6}>
@@ -304,6 +316,45 @@ export function UserManagementPanel({ user, onClose, onUpdate, onDelete }: UserM
                 )}
               </Flex>
             </Flex>
+            <Form
+              form={emailForm}
+              layout="vertical"
+              onFinish={handleSaveEmail}
+              requiredMark={false}
+              initialValues={{ email: localUser.email ?? '' }}
+            >
+              <Form.Item
+                name="email"
+                label={<span style={{ color: '#F1F5F9', fontSize: '13px', fontWeight: 500 }}>Email</span>}
+                rules={localUser.emailConfirmed ? [] : [
+                  { required: true, message: 'Email required' },
+                  { type: 'email', message: 'Invalid email' },
+                ]}
+                style={{ marginBottom: localUser.emailConfirmed ? 0 : '12px' }}
+              >
+                <Input
+                  disabled={localUser.emailConfirmed}
+                  placeholder="user@email.com"
+                  style={{ background: 'rgba(17, 19, 20, 0.6)', border: '1px solid #2A2D30', borderRadius: '10px', color: '#F1F5F9' }}
+                />
+              </Form.Item>
+              {!localUser.emailConfirmed && (
+                <Flex justify="flex-end">
+                  <Button
+                    htmlType="submit"
+                    size="small"
+                    loading={loadingStates.saveEmail}
+                    style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38BDF8', borderRadius: '8px', fontWeight: 600, fontSize: '13px' }}
+                  >
+                    {actionResults.saveEmail === 'success'
+                      ? <><CheckCircleOutlined style={{ color: '#4ADE80' }} /> Saved</>
+                      : actionResults.saveEmail === 'error'
+                        ? <><CloseCircleFilled style={{ color: '#EF4444' }} /> Failed</>
+                        : 'Save'}
+                  </Button>
+                </Flex>
+              )}
+            </Form>
           </div>
 
           {/* Magic link */}

@@ -112,6 +112,13 @@ export function adminUpdateUser(
   })
 }
 
+export function adminUpdateUserEmail(id: string, email: string): Promise<ApiResult<{ email: string }>> {
+  return request<{ email: string }>(`/admin/users/${id}/email`, {
+    method: 'PATCH',
+    body: JSON.stringify({ email }),
+  })
+}
+
 export function listAdminUsers(): Promise<ApiResult<AdminUser[]>> {
   return request<AdminUser[]>('/admin/users')
 }
