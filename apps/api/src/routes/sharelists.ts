@@ -38,6 +38,56 @@ async function getOwnerEmail(userId: string): Promise<string> {
   return data.user.email
 }
 
+interface SharelistMember {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+}
+
+async function listSharelistMembers(sharelistId: string, ownerId: string): Promise<SharelistMember[]> {
+  const { data: collabs, error: collabErr } = await supabaseAdmin
+    .from('sharelist_collaborators')
+    .select('user_id')
+    .eq('sharelist_id', sharelistId)
+
+  if (collabErr) throw new Error(collabErr.message)
+
+  const userIds = [
+    ownerId,
+    ...new Set(
+      (collabs ?? [])
+        .map(row => row.user_id as string)
+        .filter(id => id !== ownerId),
+    ),
+  ]
+
+  const { data: profiles, error: profileErr } = await supabaseAdmin
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', userIds)
+
+  if (profileErr) throw new Error(profileErr.message)
+
+  const profileById = new Map(
+    (profiles ?? []).map(profile => [profile.id as string, profile as {
+      id: string
+      display_name: string | null
+      avatar_url: string | null
+    }]),
+  )
+
+  return Promise.all(userIds.map(async id => {
+    const profile = profileById.get(id)
+    const fromProfile = profile?.display_name?.trim()
+    const email = fromProfile ? '' : await getOwnerEmail(id)
+    return {
+      id,
+      displayName: fromProfile || email.split('@')[0] || 'Member',
+      avatarUrl: profile?.avatar_url ?? null,
+    }
+  }))
+}
+
 /** Move a user's linked playlists onto a new ShareList they own. Sync log rows stay with the links. */
 async function moveLinksToOwnedSharelist(
   ownerId: string,
@@ -294,6 +344,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     }
 
     const uniqueTracks = uniqueSharelistTracks(tracks as Array<{ id: string; provider?: string }>)
+    const members = await listSharelistMembers(id, (list as SharelistRow).owner_id)
 
     res.json({
       data: {
@@ -303,6 +354,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
         ownerEmail: await getOwnerEmail((list as SharelistRow).owner_id),
         createdAt: (list as SharelistRow).created_at,
         isShared: list.owner_id !== userId,
+        members,
         links: linkRows.map(l => ({
           id: l.id,
           provider: l.provider,
@@ -311,6 +363,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           imageUrl: l.provider_playlist_image_url,
           externalUrl: l.provider_playlist_external_url,
           isPrimary: l.is_primary,
+          userId: l.user_id,
         })),
         tracks: uniqueTracks,
       },
@@ -404,6 +457,7 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
     }
 
     const uniqueTracks = uniqueSharelistTracks(tracks as Array<{ id: string; provider?: string }>)
+    const members = await listSharelistMembers(id, (list as SharelistRow).owner_id)
 
     res.json({
       data: {
@@ -413,6 +467,7 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
         ownerEmail: await getOwnerEmail((list as SharelistRow).owner_id),
         createdAt: (list as SharelistRow).created_at,
         isShared: list.owner_id !== userId,
+        members,
         links: linkRows.map(l => ({
           id: l.id,
           provider: l.provider,
@@ -421,6 +476,7 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
           imageUrl: l.provider_playlist_image_url,
           externalUrl: l.provider_playlist_external_url,
           isPrimary: l.is_primary,
+          userId: l.user_id,
         })),
         tracks: uniqueTracks,
       },

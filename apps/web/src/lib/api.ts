@@ -247,6 +247,7 @@ export interface ShareListLink {
   imageUrl: string | null
   externalUrl: string | null
   isPrimary: boolean
+  userId?: string
 }
 
 export interface ShareListSummary {
@@ -269,9 +270,16 @@ export interface ShareListTrack {
   externalUrl?: string
 }
 
+export interface ShareListMember {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+}
+
 export interface ShareListDetail extends ShareListSummary {
   tracks: ShareListTrack[]
   ownerEmail?: string
+  members?: ShareListMember[]
 }
 
 export function listShareLists(): Promise<ApiResult<ShareListSummary[]>> {

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, Button, Flex, Form, Input, Typography, Alert } from 'antd'
+import { Button, Flex, Form, Input, Typography, Alert } from 'antd'
 import { useAuth } from '../context/AuthContext'
 import { updateProfile, isError } from '../lib/api'
+import { UserAvatar } from '../components/UserAvatar'
+import { fetchGravatarProfileUrl, openGravatarQuickEditor } from '../lib/avatar'
 
 const SL = {
   surface: '#1C1F21',
@@ -18,10 +20,12 @@ export function Profile() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [gravatarLoading, setGravatarLoading] = useState(false)
+
+  const [form] = Form.useForm()
+  const watchedAvatarUrl = Form.useWatch('avatarUrl', form)
 
   if (!user) return null
-
-  const initials = (user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()
 
   const handleFinish = async (values: { displayName: string; avatarUrl?: string }) => {
     setError(null)
@@ -42,11 +46,55 @@ export function Profile() {
     navigate('/signin')
   }
 
+  const applyGravatarUrl = async (): Promise<boolean> => {
+    if (!user.email) return false
+    const url = await fetchGravatarProfileUrl(user.email)
+    if (!url) return false
+    form.setFieldsValue({ avatarUrl: url })
+    return true
+  }
+
+  const handleGetGravatar = async () => {
+    setError(null)
+    setSuccess(false)
+    if (!user.email) {
+      setError('Your account has no email to look up on Gravatar.')
+      return
+    }
+
+    setGravatarLoading(true)
+    const alreadyLinked = await applyGravatarUrl()
+    if (alreadyLinked) {
+      setGravatarLoading(false)
+      return
+    }
+
+    const opened = openGravatarQuickEditor(user.email, {
+      onProfileUpdated: () => { void applyGravatarUrl() },
+      onClosed: () => {
+        void (async () => {
+          const found = await applyGravatarUrl()
+          setGravatarLoading(false)
+          if (!found) {
+            setError('No Gravatar was found for this email. Sign in on Gravatar, then try again.')
+          }
+        })()
+      },
+    })
+
+    if (!opened) {
+      setGravatarLoading(false)
+      setError('Allow popups to sign in to Gravatar, or paste your profile link above.')
+    }
+  }
+
   return (
     <div style={{ maxWidth: 448, margin: '0 auto', padding: '48px 16px' }}>
       {/* Avatar + identity */}
       <Flex align="center" gap={16} style={{ marginBottom: 32 }}>
-        <Avatar
+        <UserAvatar
+          src={watchedAvatarUrl ?? user.avatarUrl}
+          name={user.displayName ?? user.email}
           size={56}
           style={{
             backgroundColor: 'rgba(56,189,248,0.15)',
@@ -54,11 +102,8 @@ export function Profile() {
             color: SL.accent,
             fontWeight: 700,
             fontSize: 20,
-            flexShrink: 0,
           }}
-        >
-          {initials}
-        </Avatar>
+        />
         <div style={{ minWidth: 0 }}>
           <Typography.Text
             style={{
@@ -115,6 +160,7 @@ export function Profile() {
         </Typography.Text>
 
         <Form
+          form={form}
           layout="vertical"
           onFinish={handleFinish}
           requiredMark={false}
@@ -134,8 +180,28 @@ export function Profile() {
           <Form.Item
             name="avatarUrl"
             label={<span style={{ color: SL.text, fontSize: 14, fontWeight: 500 }}>Avatar URL</span>}
+            extra={<span style={{ color: SL.muted, fontSize: 12 }}>Use Get my Gravatar to sign in, or paste https://gravatar.com/your-username</span>}
           >
-            <Input placeholder="https://…" size="large" style={{ borderRadius: 12 }} />
+            <Input placeholder="https://gravatar.com/your-username" size="large" style={{ borderRadius: 12 }} />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              htmlType="button"
+              size="large"
+              block
+              loading={gravatarLoading}
+              onClick={() => { void handleGetGravatar() }}
+              style={{
+                borderRadius: 12,
+                fontWeight: 600,
+                color: SL.accent,
+                borderColor: 'rgba(56,189,248,0.4)',
+                background: 'rgba(56,189,248,0.1)',
+              }}
+            >
+              Get my Gravatar
+            </Button>
           </Form.Item>
 
           {error && (
@@ -156,7 +222,7 @@ export function Profile() {
               size="large"
               loading={loading}
               block
-              style={{ borderRadius: 12, fontWeight: 600 }}
+              style={{ borderRadius: 12, fontWeight: 600, color: '#FFFFFF' }}
             >
               Save changes
             </Button>

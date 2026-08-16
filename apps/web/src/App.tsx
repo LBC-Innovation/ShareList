@@ -44,7 +44,7 @@ function App() {
           borderRadius: 8,
         },
         components: {
-          Button: { primaryColor: SL.accent },
+          Button: { primaryColor: '#FFFFFF' },
           Badge: { dotSize: 8 },
           Progress: { circleTextColor: SL.text },
           Form: { labelColor: SL.text },

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Tag, Button, Space, Form, Input, Switch, Typography, Flex } from 'antd'
+import { UserAvatar } from './UserAvatar'
 import {
   CheckCircleOutlined, CloseCircleOutlined, CloseCircleFilled,
   LoadingOutlined, CloseOutlined, MailOutlined, LockOutlined, DeleteOutlined,
@@ -157,7 +158,6 @@ export function UserManagementPanel({ user, onClose, onUpdate, onDelete }: UserM
   }
 
   const displayName = localUser.displayName ?? localUser.email ?? '?'
-  const initials = displayName.charAt(0).toUpperCase()
 
   const SectionDivider = () => (
     <div style={{ height: 1, background: 'rgba(42, 45, 48, 0.6)', margin: '0 -32px 24px' }} />
@@ -207,15 +207,20 @@ export function UserManagementPanel({ user, onClose, onUpdate, onDelete }: UserM
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
       }}>
         <Flex align="center" gap={16}>
-          <div style={{
-            width: '52px', height: '52px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '22px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
-            boxShadow: '0 4px 12px rgba(56, 189, 248, 0.3)',
-          }}>
-            {initials}
-          </div>
+          <UserAvatar
+            src={localUser.avatarUrl}
+            name={displayName}
+            size={52}
+            shape="square"
+            style={{
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+              fontSize: '22px',
+              fontWeight: 700,
+              color: '#FFFFFF',
+              boxShadow: '0 4px 12px rgba(56, 189, 248, 0.3)',
+            }}
+          />
           <div style={{ flex: 1 }}>
             <Title level={4} style={{ margin: 0, color: '#F1F5F9', fontSize: '19px', fontWeight: 700, letterSpacing: '-0.3px', marginBottom: '3px' }}>
               {displayName}

@@ -66,7 +66,6 @@ export function PlaylistView() {
   const [isLoading, setLoading]           = useState(true)
   const [syncing, setSyncing]             = useState(false)
   const [crossSyncing, setCrossSyncing]   = useState(false)
-  const [lastSynced, setLastSynced]       = useState<Date | null>(null)
   const [error, setError]                 = useState<string | null>(null)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [displayTracks, setDisplayTracks] = useState<Track[]>([])
@@ -83,7 +82,6 @@ export function PlaylistView() {
       return
     }
     setSharelist(result.data)
-    setLastSynced(new Date())
   }
 
   const runSyncLists = async (): Promise<api.CrossSyncResult | null> => {
@@ -151,7 +149,6 @@ export function PlaylistView() {
       return
     }
     setSharelist(result.data)
-    setLastSynced(new Date())
   }
 
   useEffect(() => {
@@ -217,11 +214,18 @@ export function PlaylistView() {
 
   const primaryLink = sharelist?.links.find(l => l.isPrimary) ?? sharelist?.links[0] ?? null
 
-  const heroLinks = (sharelist?.links ?? []).map(l => ({
-    provider: l.provider,
-    playlistName: l.playlistName,
-    imageUrl: l.imageUrl,
-  }))
+  const membersById = new Map((sharelist?.members ?? []).map(member => [member.id, member]))
+  const heroLinks = (sharelist?.links ?? []).map(l => {
+    const member = l.userId ? membersById.get(l.userId) : undefined
+    return {
+      provider: l.provider,
+      playlistName: l.playlistName,
+      imageUrl: l.imageUrl,
+      contributor: member
+        ? { displayName: member.displayName, avatarUrl: member.avatarUrl }
+        : undefined,
+    }
+  })
 
   return (
     <Content style={{ maxWidth: '480px', margin: '0 auto', padding: '24px 20px', width: '100%' }}>
@@ -242,7 +246,6 @@ export function PlaylistView() {
           name={sharelist?.name ?? ''}
           trackCount={displayTracks.length}
           links={heroLinks}
-          onManageList={() => setShowLinkModal(true)}
           isLoading={isLoading}
         />
       </div>
@@ -252,9 +255,9 @@ export function PlaylistView() {
           isLoading={isLoading}
           syncing={syncing}
           crossSyncing={crossSyncing}
-          lastSynced={lastSynced}
           onSync={() => { void handleSync() }}
           onCrossSync={() => { void handleCrossSync() }}
+          onManageList={() => setShowLinkModal(true)}
         />
       </div>
 

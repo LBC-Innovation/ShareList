@@ -1,17 +1,14 @@
-import { Avatar, Badge, Dropdown, Flex } from 'antd'
+import { Badge, Dropdown, Flex } from 'antd'
 import { BellOutlined, UserOutlined, LogoutOutlined, QuestionCircleOutlined } from '@ant-design/icons'
 import { Music2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { MenuProps } from 'antd'
+import { UserAvatar } from './UserAvatar'
 
 export function TopNavigation() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
-
-  const initials = user
-    ? (user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()
-    : '?'
 
   const handleSignOut = async () => {
     await signOut()
@@ -96,16 +93,16 @@ export function TopNavigation() {
                   offset={[-2, 30]}
                   style={{ boxShadow: '0 0 0 2px #111314' }}
                 >
-                  <Avatar
+                  <UserAvatar
+                    src={user?.avatarUrl}
+                    name={user?.displayName ?? user?.email}
                     size={34}
                     style={{
                       background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
                       fontWeight: 600,
                       cursor: 'pointer',
                     }}
-                  >
-                    {initials}
-                  </Avatar>
+                  />
                 </Badge>
               </div>
             </Dropdown>
