@@ -91,7 +91,7 @@ export function SyncStatusBar({ isLoading = false, syncing = false, crossSyncing
           flexShrink: 0,
           marginLeft: isCompact ? 'auto' : undefined,
         }}>
-          Last Synced{' '}
+          Last Fetched{' '}
           <span style={{ color: '#94A3B8', fontWeight: 500 }}>{formatLastSynced(lastSynced)}</span>
         </span>
       )}
