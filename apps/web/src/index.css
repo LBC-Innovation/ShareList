@@ -25,9 +25,19 @@
 
 .sl-unlink-confirm.ant-btn {
   position: relative;
-  z-index: 9999;
+  z-index: 1;
   overflow: visible;
   isolation: isolate;
+}
+
+/* Clip pulse rings to the modal so they never expand the page */
+.ant-modal-wrap {
+  overflow-x: hidden;
+}
+
+.ant-modal .ant-modal-container,
+.ant-modal .ant-modal-content {
+  overflow: hidden;
 }
 
 .sl-unlink-confirm.ant-btn > * {

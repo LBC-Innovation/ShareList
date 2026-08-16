@@ -8,6 +8,7 @@ body {
   background: #111314;
   font-family: 'Inter', system-ui, sans-serif;
   color: #F1F5F9;
+  overflow-x: hidden;
 }
 
 * {

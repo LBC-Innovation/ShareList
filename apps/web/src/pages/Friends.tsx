@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Layout, Card, Flex, Typography, Tabs, Form, Input, Select, Button, Empty,
-  Skeleton, notification, Tag, Switch, Popconfirm,
+  Skeleton, notification, Tag, Switch, Popconfirm, Grid,
 } from 'antd'
 import { MailOutlined, UserAddOutlined, DeleteOutlined } from '@ant-design/icons'
 import { Users } from 'lucide-react'
@@ -43,7 +43,7 @@ function PlaylistShareSelect({
       onOpenChange={setOpen}
       value={label}
       size="middle"
-      style={{ width: '100%', minWidth: 180 }}
+      style={{ width: '100%', minWidth: 0 }}
       styles={{ popup: { root: { padding: 0 } } }}
       popupRender={() => (
         <div
@@ -116,6 +116,8 @@ function PlaylistShareSelect({
 export function Friends() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [notifyApi, contextHolder] = notification.useNotification()
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
   const activeTab = searchParams.get('tab') === 'my-friends' ? 'my-friends' : 'add'
 
   const [lists, setLists] = useState<ShareListSummary[]>([])
@@ -288,20 +290,22 @@ export function Friends() {
         }}
         styles={{ body: { padding: 0 } }}
       >
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(56, 189, 248, 0.1)', background: 'rgba(17, 19, 20, 0.4)' }}>
-          <Flex>
-            <div style={{ flex: '1 1 32%', paddingRight: '16px' }}>
-              <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>User</Text>
-            </div>
-            <div style={{ width: '110px', paddingRight: '16px' }}>
-              <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</Text>
-            </div>
-            <div style={{ flex: '1 1 38%', paddingRight: '16px' }}>
-              <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Playlists</Text>
-            </div>
-            <div style={{ width: '120px' }} />
-          </Flex>
-        </div>
+        {!isCompact && (
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(56, 189, 248, 0.1)', background: 'rgba(17, 19, 20, 0.4)' }}>
+            <Flex>
+              <div style={{ flex: '1 1 32%', paddingRight: '16px' }}>
+                <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>User</Text>
+              </div>
+              <div style={{ width: '110px', paddingRight: '16px' }}>
+                <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</Text>
+              </div>
+              <div style={{ flex: '1 1 38%', paddingRight: '16px', minWidth: 0 }}>
+                <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Playlists</Text>
+              </div>
+              <div style={{ width: '120px', flexShrink: 0 }} />
+            </Flex>
+          </div>
+        )}
 
         {friendsLoading ? (
           Array.from({ length: 4 }).map((_, index) => (
@@ -328,56 +332,62 @@ export function Friends() {
               <div
                 key={personKey(person)}
                 style={{
-                  padding: '16px 20px',
+                  padding: isCompact ? '16px' : '16px 20px',
                   borderBottom: index < people.length - 1 ? '1px solid rgba(56, 189, 248, 0.05)' : 'none',
                 }}
               >
-                <Flex align="center">
-                  <Flex align="center" gap={12} style={{ flex: '1 1 32%', paddingRight: '16px', minWidth: 0 }}>
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
-                    }}>
-                      {initials}
-                    </div>
-                    <Text style={{
-                      color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {person.email || 'Unknown user'}
-                    </Text>
-                  </Flex>
+                {isCompact ? (
+                  <Flex vertical gap={12}>
+                    <Flex align="center" justify="space-between" gap={12}>
+                      <Flex align="center" gap={12} style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
+                        }}>
+                          {initials}
+                        </div>
+                        <Text style={{
+                          color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {person.email || 'Unknown user'}
+                        </Text>
+                      </Flex>
+                      {isPending ? (
+                        <Tag style={{
+                          margin: 0, flexShrink: 0,
+                          background: 'rgba(251, 191, 36, 0.15)',
+                          border: '1px solid rgba(251, 191, 36, 0.35)',
+                          color: '#FBBF24',
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                        }}>
+                          Pending
+                        </Tag>
+                      ) : (
+                        <Text style={{ color: '#94A3B8', fontSize: '13px', flexShrink: 0 }}>Active</Text>
+                      )}
+                    </Flex>
 
-                  <div style={{ width: '110px', paddingRight: '16px' }}>
-                    {isPending ? (
-                      <Tag style={{
-                        margin: 0,
-                        background: 'rgba(251, 191, 36, 0.15)',
-                        border: '1px solid rgba(251, 191, 36, 0.35)',
-                        color: '#FBBF24',
-                        fontWeight: 700,
-                        padding: '3px 10px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
+                    <div>
+                      <Text style={{
+                        color: '#64748B', fontSize: '11px', fontWeight: 600,
+                        textTransform: 'uppercase', letterSpacing: '0.5px',
+                        display: 'block', marginBottom: '8px',
                       }}>
-                        Pending
-                      </Tag>
-                    ) : (
-                      <Text style={{ color: '#94A3B8', fontSize: '13px' }}>Active</Text>
-                    )}
-                  </div>
+                        Playlists
+                      </Text>
+                      <PlaylistShareSelect
+                        person={person}
+                        lists={ownedLists}
+                        onToggle={handleToggleList}
+                      />
+                    </div>
 
-                  <div style={{ flex: '1 1 38%', paddingRight: '16px', minWidth: 0 }}>
-                    <PlaylistShareSelect
-                      person={person}
-                      lists={ownedLists}
-                      onToggle={handleToggleList}
-                    />
-                  </div>
-
-                  <div style={{ width: '120px' }}>
                     <Popconfirm
                       title="Remove this friend?"
                       description="They will lose access to every list you shared."
@@ -387,7 +397,7 @@ export function Friends() {
                       onConfirm={() => void handleRemove(person)}
                     >
                       <Button
-                        size="small"
+                        block
                         icon={<DeleteOutlined />}
                         loading={removingKey === personKey(person)}
                         style={{
@@ -395,8 +405,7 @@ export function Friends() {
                           border: '1px solid rgba(239, 68, 68, 0.3)',
                           color: '#EF4444',
                           borderRadius: '8px',
-                          height: '32px',
-                          padding: '0 12px',
+                          height: '36px',
                           fontWeight: 600,
                           fontSize: '13px',
                         }}
@@ -404,8 +413,83 @@ export function Friends() {
                         Remove
                       </Button>
                     </Popconfirm>
-                  </div>
-                </Flex>
+                  </Flex>
+                ) : (
+                  <Flex align="center">
+                    <Flex align="center" gap={12} style={{ flex: '1 1 32%', paddingRight: '16px', minWidth: 0 }}>
+                      <div style={{
+                        width: '40px', height: '40px', borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
+                      }}>
+                        {initials}
+                      </div>
+                      <Text style={{
+                        color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {person.email || 'Unknown user'}
+                      </Text>
+                    </Flex>
+
+                    <div style={{ width: '110px', paddingRight: '16px', flexShrink: 0 }}>
+                      {isPending ? (
+                        <Tag style={{
+                          margin: 0,
+                          background: 'rgba(251, 191, 36, 0.15)',
+                          border: '1px solid rgba(251, 191, 36, 0.35)',
+                          color: '#FBBF24',
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                        }}>
+                          Pending
+                        </Tag>
+                      ) : (
+                        <Text style={{ color: '#94A3B8', fontSize: '13px' }}>Active</Text>
+                      )}
+                    </div>
+
+                    <div style={{ flex: '1 1 38%', paddingRight: '16px', minWidth: 0 }}>
+                      <PlaylistShareSelect
+                        person={person}
+                        lists={ownedLists}
+                        onToggle={handleToggleList}
+                      />
+                    </div>
+
+                    <div style={{ width: '120px', flexShrink: 0 }}>
+                      <Popconfirm
+                        title="Remove this friend?"
+                        description="They will lose access to every list you shared."
+                        okText="Remove"
+                        cancelText="Cancel"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => void handleRemove(person)}
+                      >
+                        <Button
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          loading={removingKey === personKey(person)}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#EF4444',
+                            borderRadius: '8px',
+                            height: '32px',
+                            padding: '0 12px',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </Popconfirm>
+                    </div>
+                  </Flex>
+                )}
               </div>
             )
           })
@@ -415,7 +499,7 @@ export function Friends() {
   )
 
   return (
-    <Content style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 20px 100px', width: '100%' }}>
+    <Content style={{ maxWidth: '1100px', margin: '0 auto', padding: isCompact ? '24px 16px 100px' : '24px 20px 100px', width: '100%' }}>
       {contextHolder}
       <Title level={1} style={{ color: SL.text, margin: '0 0 20px', fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px' }}>
         Friends
