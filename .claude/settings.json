@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/zhwatts/Documents/_DEV/_PERSONAL/ShareList/scripts/board-check.js",
+            "timeout": 20,
+            "statusMessage": "Checking GitHub Project board..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+@import './fonts.css';
+@import './theme.css';
+
+/* Pulse animation for track equalizer */
+@keyframes pulse {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.6);
+  }
+}

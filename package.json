@@ -1,0 +1,35 @@
+{
+  "name": "sharelist",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "setup": "npm install && node scripts/setup.js",
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhwatts/sharelist.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/zhwatts/sharelist/issues"
+  },
+  "homepage": "https://github.com/zhwatts/sharelist#readme",
+  "dependencies": {
+    "@octokit/rest": "^22.0.1",
+    "dotenv": "^17.4.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

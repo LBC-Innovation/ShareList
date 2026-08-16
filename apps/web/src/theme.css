@@ -1,0 +1,62 @@
+/* Pure CSS theme for ShareList - No Tailwind */
+
+/* Base styles */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #111314;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #F1F5F9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Default typography */
+html {
+  font-size: 16px;
+}
+
+h1 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+label {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+button {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+input {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
