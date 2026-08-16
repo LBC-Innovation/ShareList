@@ -14,6 +14,7 @@ import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
 import { CheckCircleOutlined, LoadingOutlined, LinkOutlined, DeleteOutlined, ExclamationCircleFilled } from '@ant-design/icons'
 import * as api from '../lib/api'
 import type { ConnectedService, ShareListLink, StreamingPlaylist } from '../lib/api'
+import { notifyApiFailure } from '../lib/notify'
 
 const { Text, Title } = Typography
 
@@ -74,7 +75,7 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
       const result = await api.getStreamingPlaylists(selectedService)
       setPlLoading(false)
       if (api.isError(result)) {
-        notifyApi.error({ message: 'Failed to load playlists', description: result.error.message, placement: 'topRight' })
+        notifyApiFailure(notifyApi, 'Failed to load playlists', result)
         return
       }
       setPlaylists(result.data)
@@ -94,7 +95,7 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
         externalUrl: playlist.externalUrl ?? null,
       })
       if (api.isError(result)) {
-        notifyApi.error({ message: 'Failed to link playlist', description: result.error.message, placement: 'topRight' })
+        notifyApiFailure(notifyApi, 'Failed to link playlist', result)
         return
       }
       onLinked()
