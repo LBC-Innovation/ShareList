@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import type { ApiResult, ApiError } from '@sharelist/shared'
 import { supabaseAuth, supabaseAdmin } from '../lib/supabase'
 import { requireAuth, requirePermission } from '../middleware/auth'
+import { clientOrigin } from '../lib/origins'
 
 const router = Router()
 
@@ -13,12 +14,15 @@ function log(level: string, message: string, ctx: Record<string, unknown> = {}):
   console.log(JSON.stringify({ level, message, ...ctx }))
 }
 
-// Allows through if the caller is an admin OR if they hold usermanage:selfmanage and are targeting themselves.
+// Allows through if the caller can open user management, is an admin, or is
+// targeting themselves with usermanage:selfmanage. The admin UI is gated by
+// usermanage:listusers (not role === 'admin'), so these actions must match.
 function requireAdminOrSelfManage(req: Request, res: Response, next: NextFunction): void {
   const id = req.params['id'] as string
   const isSelf = req.user!.id === id
   const hasSelfManage = req.user!.permissions.includes('usermanage:selfmanage')
-  if (req.user!.role === 'admin' || (isSelf && hasSelfManage)) { next(); return }
+  const canManageUsers = req.user!.permissions.includes('usermanage:listusers')
+  if (req.user!.role === 'admin' || canManageUsers || (isSelf && hasSelfManage)) { next(); return }
   const err: ApiError = { data: null, error: { message: 'Forbidden' } }
   res.status(403).json(err)
 }
@@ -135,6 +139,62 @@ router.post('/:id/verify', requireAdminOrSelfManage, async (req: Request, res: R
 
   log('info', 'User email verified by admin', { adminId: req.user!.id, targetId: id })
   const result: ApiResult<{ success: boolean }> = { data: { success: true }, error: null }
+  res.json(result)
+})
+
+// PATCH /admin/users/:id/email — change an unverified user's email and send a verification message
+router.patch('/:id/email', requireAdminOrSelfManage, async (req: Request, res: Response) => {
+  const id = req.params['id'] as string
+  const rawEmail = (req.body as { email?: unknown })['email']
+  const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : ''
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ data: null, error: { message: 'A valid email is required' } })
+    return
+  }
+
+  const { data: { user }, error: getUserError } = await supabaseAuth.auth.admin.getUserById(id)
+  if (getUserError || !user) {
+    const err: ApiError = { data: null, error: { message: 'User not found' } }
+    res.status(404).json(err)
+    return
+  }
+
+  if (user.email_confirmed_at) {
+    const err: ApiError = { data: null, error: { message: 'Verified emails cannot be changed' } }
+    res.status(400).json(err)
+    return
+  }
+
+  const currentEmail = user.email?.toLowerCase()
+  if (currentEmail !== email) {
+    const { error: updateError } = await supabaseAuth.auth.admin.updateUserById(id, { email })
+    if (updateError) {
+      log('error', 'Admin email update failed', { adminId: req.user!.id, targetId: id, error: updateError.message })
+      const err: ApiError = { data: null, error: { message: updateError.message } }
+      res.status(500).json(err)
+      return
+    }
+  }
+
+  const { error: resendError } = await supabaseAuth.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: clientOrigin() },
+  })
+  if (resendError) {
+    log('error', 'Verification email after admin email update failed', {
+      adminId: req.user!.id,
+      targetId: id,
+      error: resendError.message,
+    })
+    const err: ApiError = { data: null, error: { message: resendError.message } }
+    res.status(500).json(err)
+    return
+  }
+
+  log('info', 'Admin updated user email and sent verification', { adminId: req.user!.id, targetId: id, email })
+  const result: ApiResult<{ email: string }> = { data: { email }, error: null }
   res.json(result)
 })
 
