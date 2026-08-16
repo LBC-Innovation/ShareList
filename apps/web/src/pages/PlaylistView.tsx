@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Layout, Card, Flex, Skeleton, Typography, notification } from 'antd'
 import { PlaylistHero } from '../components/PlaylistHero'
 import { SyncStatusBar } from '../components/SyncStatusBar'
-import { TrackList } from '../components/TrackList'
+import { TrackList, SHUFFLE_MOVE_MS } from '../components/TrackList'
 import { LaunchStreamingFAB } from '../components/LaunchStreamingFAB'
 import { LinkPlaylistModal } from '../components/LinkPlaylistModal'
 import type { Track } from '../components/TrackList'
@@ -71,6 +71,7 @@ export function PlaylistView() {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [displayTracks, setDisplayTracks] = useState<Track[]>([])
   const [shuffling, setShuffling]         = useState(false)
+  const [shuffleFrom, setShuffleFrom]     = useState<Track[] | null>(null)
 
   const loadShareList = async () => {
     if (!id) return
@@ -85,47 +86,57 @@ export function PlaylistView() {
     setLastSynced(new Date())
   }
 
-  const handleCrossSync = async () => {
-    if (!id) return
+  const runSyncLists = async (): Promise<api.CrossSyncResult | null> => {
+    if (!id) return null
     setCrossSyncing(true)
-    const result = await api.crossSyncShareList(id)
-    setCrossSyncing(false)
-    if (api.isError(result)) {
-      notifyApi.error({ message: 'Sync Lists failed', description: result.error.message, placement: 'topRight' })
-      return
+    try {
+      const result = await api.crossSyncShareList(id)
+      if (api.isError(result)) {
+        notifyApi.error({ message: 'Sync Lists failed', description: result.error.message, placement: 'topRight' })
+        return null
+      }
+      return result.data
+    } finally {
+      setCrossSyncing(false)
     }
-    const { totalAdded, links } = result.data
+  }
+
+  const reportSyncLists = (data: api.CrossSyncResult) => {
+    const { totalAdded, links } = data
     const linkErrors = links.filter(l => l.error)
 
     if (totalAdded === 0 && linkErrors.length > 0) {
-      // One or more provider calls failed — surface the actual error
-      const description = linkErrors
-        .map(l => `${l.playlistName}: ${l.error}`)
-        .join('\n')
       notifyApi.error({
         message: 'Sync Lists failed',
-        description,
+        description: linkErrors.map(l => `${l.playlistName}: ${l.error}`).join('\n'),
         placement: 'topRight',
         duration: 10,
       })
-    } else if (totalAdded === 0) {
+      return
+    }
+    if (totalAdded === 0) {
       notifyApi.info({
         message: 'Already up to date',
         description: 'All linked playlists already share the same tracks.',
         placement: 'topRight',
       })
-    } else {
-      const details = links
-        .filter(l => l.tracksAdded > 0)
-        .map(l => `${l.tracksAdded} track${l.tracksAdded === 1 ? '' : 's'} → ${l.playlistName}`)
-        .join('\n')
-      notifyApi.success({
-        message: `Sync Lists complete — ${totalAdded} track${totalAdded === 1 ? '' : 's'} added`,
-        description: details || undefined,
-        placement: 'topRight',
-      })
+      return
     }
-    // Reload so track counts reflect the additions
+    const details = links
+      .filter(l => l.tracksAdded > 0)
+      .map(l => `${l.tracksAdded} track${l.tracksAdded === 1 ? '' : 's'} → ${l.playlistName}`)
+      .join('\n')
+    notifyApi.success({
+      message: `Sync Lists complete — ${totalAdded} track${totalAdded === 1 ? '' : 's'} added`,
+      description: details || undefined,
+      placement: 'topRight',
+    })
+  }
+
+  const handleCrossSync = async () => {
+    const data = await runSyncLists()
+    if (!data) return
+    reportSyncLists(data)
     void loadShareList()
   }
 
@@ -153,16 +164,15 @@ export function PlaylistView() {
 
   const handleShuffle = async () => {
     if (!id || shuffling || displayTracks.length < 2) return
+    setShuffleFrom(displayTracks)
     setShuffling(true)
-    let latest = displayTracks
+    const latest = shuffleTracks(displayTracks)
+    setDisplayTracks(latest)
     try {
-      for (let frame = 0; frame < 10; frame++) {
-        latest = shuffleTracks(latest)
-        setDisplayTracks(latest)
-        await wait(90)
-      }
-
-      const result = await api.shuffleShareList(id, latest.map(track => track.id))
+      const [result] = await Promise.all([
+        api.shuffleShareList(id, latest.map(track => track.id)),
+        wait(SHUFFLE_MOVE_MS),
+      ])
       if (api.isError(result)) {
         notifyApi.error({
           message: 'Shuffle synced locally, but remote playlists were not updated',
@@ -196,6 +206,7 @@ export function PlaylistView() {
       }
     } finally {
       setShuffling(false)
+      setShuffleFrom(null)
     }
   }
 
@@ -275,7 +286,12 @@ export function PlaylistView() {
             <Text style={{ color: '#64748B', fontSize: '14px' }}>No tracks found for this playlist.</Text>
           </Card>
         ) : (
-          <TrackList tracks={displayTracks} shuffling={shuffling} onShuffle={() => void handleShuffle()} />
+          <TrackList
+            tracks={displayTracks}
+            shuffling={shuffling}
+            shuffleFrom={shuffleFrom}
+            onShuffle={() => void handleShuffle()}
+          />
         )
       )}
 

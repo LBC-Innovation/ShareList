@@ -49,7 +49,7 @@ const STEPS: Step[] = [
   {
     n: '07',
     title: 'Shuffle the songs',
-    body: 'On a ShareList, tap Shuffle above the song list. The songs rearrange with a short animation, then ShareList writes that new order to the linked playlists on Spotify or Apple Music.',
+    body: 'On a ShareList, tap Shuffle above the song list. Songs float up or down to their new places, then ShareList writes that order to the linked playlists on Spotify or Apple Music.',
   },
   {
     n: '08',
