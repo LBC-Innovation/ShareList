@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { User } from '@sharelist/shared'
 import * as api from '../lib/api'
 import { subscribeConnectivity } from '../lib/connectivity'
+import { markReturningUser } from '../lib/returning-user'
 
 export type AuthSessionState = 'anonymous' | 'authenticated' | 'expired'
 
@@ -43,11 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyAuthenticated = (next: User): void => {
     rememberUser(next)
+    markReturningUser()
     setUser(next)
     setSession('authenticated')
   }
 
   const keepAuthenticated = (): void => {
+    markReturningUser()
     const hint = api.readSessionHint()
     if (hint) setUser(userFromHint(hint))
     else if (!userRef.current) setUser(userFromHint({ id: 'session', email: '' }))
