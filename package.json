@@ -10,6 +10,7 @@
   "scripts": {
     "setup": "npm install && node scripts/setup.js",
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "dev:device-test": "node scripts/dev-device-test.js",
     "dev:web": "npm run dev -w apps/web",
     "dev:api": "npm run dev -w apps/api",
     "build:api": "npm run build -w @sharelist/api",

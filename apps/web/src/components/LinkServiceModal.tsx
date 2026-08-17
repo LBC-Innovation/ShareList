@@ -15,6 +15,7 @@ import { useState } from 'react'
 import { Modal, Button, Typography, Flex, Alert, Space } from 'antd'
 import { CheckCircleOutlined, LinkOutlined } from '@ant-design/icons'
 import * as api from '../lib/api'
+import { noteDocumentNavigation } from '../lib/pwa-debug'
 
 const { Text, Title } = Typography
 
@@ -72,6 +73,7 @@ export function LinkServiceModal({ provider, displayName, onClose, onConnected }
         return
       }
       // Navigate the browser — the callback will redirect back to /settings
+      noteDocumentNavigation(result.data.url, 'spotify-oauth-leave')
       window.location.href = result.data.url
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get auth URL')

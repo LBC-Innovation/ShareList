@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: [
         'favicon.ico',
         'logo.png',
@@ -24,10 +25,9 @@ export default defineConfig({
         name: 'ShareList',
         short_name: 'ShareList',
         description: 'Share music playlists across Spotify, Apple Music, and YouTube Music.',
-        theme_color: '#111314',
-        background_color: '#111314',
+        theme_color: '#161819',
+        background_color: '#161819',
         display: 'standalone',
-        display_override: ['standalone', 'minimal-ui'],
         start_url: '/',
         scope: '/',
         lang: 'en',

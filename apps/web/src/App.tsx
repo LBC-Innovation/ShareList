@@ -17,6 +17,8 @@ import { InviteLanding } from './pages/InviteLanding'
 import { Settings } from './pages/Settings'
 import { HowToUse } from './pages/HowToUse'
 import { InstallBanner } from './components/InstallBanner'
+import { PwaDebugOverlay } from './components/PwaDebugOverlay'
+import { UpdateBanner } from './components/UpdateBanner'
 
 const SL = {
   bg: '#111314',
@@ -99,6 +101,8 @@ function App() {
         </Route>
       </Routes>
       <InstallBanner />
+      <UpdateBanner />
+      <PwaDebugOverlay />
     </ConfigProvider>
   )
 }
