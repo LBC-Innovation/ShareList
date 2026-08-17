@@ -284,6 +284,12 @@ export function CreateShareList() {
                 loading={creating}
                 onClick={() => void handleCreate()}
                 icon={!creating && <CheckCircleOutlined />}
+                className="sl-create-from-btn"
+                title={
+                  creating
+                    ? undefined
+                    : `Create ShareList from "${selectedPlaylistData?.name ?? ''}"`
+                }
                 style={{
                   background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
                   border: 'none', borderRadius: '10px', height: '48px',
@@ -292,7 +298,13 @@ export function CreateShareList() {
                   marginTop: '20px',
                 }}
               >
-                {creating ? 'Creating…' : `Create ShareList from "${selectedPlaylistData?.name ?? ''}"`}
+                {creating ? 'Creating…' : (
+                  <span className="sl-create-from-label">
+                    <span className="sl-create-from-prefix">Create ShareList from "</span>
+                    <span className="sl-create-from-name">{selectedPlaylistData?.name ?? ''}</span>
+                    <span className="sl-create-from-suffix">"</span>
+                  </span>
+                )}
               </Button>
             )}
           </>
