@@ -53,6 +53,45 @@ export function applyStandaloneClass(): void {
   document.documentElement.classList.toggle('sl-standalone', standalone)
 }
 
+/**
+ * Pin the app chrome to the visible iOS viewport.
+ *
+ * Standalone WebKit reports a shorter `100dvh` / `-webkit-fill-available` than
+ * the layout viewport used for hit-testing. Mixing `top`, `bottom`, and `height`
+ * on a `position: fixed` shell then paints the UI short (black gap under the
+ * nav) while taps still land where the full-height box would be.
+ *
+ * `--sl-app-height` is the larger of `innerHeight` and `visualViewport.height`
+ * so paint fills the same box taps already use.
+ */
+export function lockVisualViewport(): void {
+  const root = document.documentElement
+  let frame = 0
+
+  const apply = (): void => {
+    frame = 0
+    const vv = window.visualViewport
+    const width = Math.max(window.innerWidth, vv?.width ?? 0)
+    const height = Math.max(window.innerHeight, vv?.height ?? 0)
+    root.style.setProperty('--sl-vv-top', `${vv?.offsetTop ?? 0}px`)
+    root.style.setProperty('--sl-vv-left', `${vv?.offsetLeft ?? 0}px`)
+    root.style.setProperty('--sl-app-width', `${width}px`)
+    root.style.setProperty('--sl-app-height', `${height}px`)
+    root.classList.add('sl-vv-locked')
+  }
+
+  const sync = (): void => {
+    if (frame) return
+    frame = window.requestAnimationFrame(apply)
+  }
+
+  apply()
+  window.visualViewport?.addEventListener('resize', sync)
+  window.visualViewport?.addEventListener('scroll', sync)
+  window.addEventListener('resize', sync)
+  window.addEventListener('orientationchange', sync)
+}
+
 export function getDeferredPrompt(): BeforeInstallPromptEvent | null {
   return deferredPrompt
 }

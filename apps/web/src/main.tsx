@@ -5,7 +5,7 @@ import 'antd/dist/reset.css'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
-import { applyStandaloneClass, initPwaInstallListener } from './lib/pwa'
+import { applyStandaloneClass, initPwaInstallListener, lockVisualViewport } from './lib/pwa'
 
 // Handle Supabase hash-based redirects (magic link, password reset, etc.)
 // before React mounts. The root route redirects immediately and strips the
@@ -23,6 +23,7 @@ import { applyStandaloneClass, initPwaInstallListener } from './lib/pwa'
 })()
 
 applyStandaloneClass()
+lockVisualViewport()
 initPwaInstallListener()
 
 const rootElement = document.getElementById('root')
