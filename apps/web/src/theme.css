@@ -9,6 +9,22 @@
   --sl-safe-bottom: env(safe-area-inset-bottom, 0px);
   --sl-safe-left: env(safe-area-inset-left, 0px);
   --sl-safe-right: env(safe-area-inset-right, 0px);
+  --sl-content-max-width: 1000px;
+  --sl-page-pad-x: 16px;
+  --sl-page-pad-y: 20px;
+}
+
+@media (min-width: 480px) {
+  :root {
+    --sl-page-pad-x: 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --sl-page-pad-x: 24px;
+    --sl-page-pad-y: 24px;
+  }
 }
 
 html {
@@ -111,13 +127,28 @@ input {
   overflow: hidden;
 }
 
+.sl-content-inner,
+.sl-page {
+  width: 100%;
+  max-width: var(--sl-content-max-width);
+  margin-inline: auto;
+  padding-inline: max(var(--sl-page-pad-x), var(--sl-safe-left)) max(var(--sl-page-pad-x), var(--sl-safe-right));
+  box-sizing: border-box;
+}
+
+.sl-page {
+  min-width: 0;
+  padding-top: var(--sl-page-pad-y);
+  padding-bottom: 28px;
+}
+
 .sl-top-nav {
   position: relative;
   flex-shrink: 0;
   z-index: 50;
   background: #111314;
   border-bottom: 1px solid #2A2D30;
-  padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 0 12px;
 }
 
 .sl-bottom-nav {

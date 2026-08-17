@@ -50,14 +50,14 @@ export function AdminUsers() {
 
   if (loadError) {
     return (
-      <Content style={{ maxWidth: '960px', margin: '0 auto', padding: isCompact ? '20px 16px 28px' : '32px 24px' }}>
+      <Content>
         <Alert message={`Failed to load users: ${loadError}`} type="error" showIcon style={{ borderRadius: '12px' }} />
       </Content>
     )
   }
 
   return (
-    <Content style={{ maxWidth: '1200px', margin: '0 auto', padding: isCompact ? '20px 16px 28px' : '32px 24px 24px' }}>
+    <Content>
       {/* Header */}
       <Flex justify="space-between" align={isCompact ? 'stretch' : 'center'} vertical={isCompact} gap={12} style={{ marginBottom: '24px' }}>
         <Title level={1} style={{ color: '#F1F5F9', margin: 0, fontSize: isCompact ? '24px' : '28px', fontWeight: 700, letterSpacing: '-0.5px' }}>

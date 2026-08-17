@@ -89,7 +89,7 @@ export function Profile() {
   }
 
   return (
-    <div style={{ maxWidth: 448, margin: '0 auto', padding: '24px 16px 28px' }}>
+    <div>
       {/* Avatar + identity */}
       <Flex align="center" gap={16} style={{ marginBottom: 32 }}>
         <UserAvatar

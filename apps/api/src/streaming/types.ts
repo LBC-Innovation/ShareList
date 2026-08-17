@@ -52,6 +52,13 @@ export interface StreamingProvider {
    */
   handleCallback(code: string, state: string): Promise<{ providerUserId: string }>
 
+  /**
+   * Best-effort: persist and return the provider account email when the
+   * platform exposes one. Omit on providers that never have an email
+   * (Apple Music). Return null when the current token lacks the scope.
+   */
+  syncAccountEmail?(userId: string): Promise<string | null>
+
   /** Fetch the user's playlists from the provider, refreshing tokens as needed. */
   getPlaylists(userId: string): Promise<StreamingPlaylist[]>
 

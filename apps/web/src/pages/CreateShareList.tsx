@@ -112,7 +112,7 @@ export function CreateShareList() {
   const selectedMeta = selectedService ? PROVIDER_META[selectedService] : null
 
   return (
-    <Content style={{ padding: '24px 16px 28px', width: '100%', maxWidth: '640px', margin: '0 auto' }}>
+    <Content>
       {contextHolder}
 
       {/* Header */}

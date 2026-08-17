@@ -51,7 +51,7 @@ export function TopNavigation() {
 
   return (
     <nav className="sl-top-nav">
-      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+      <div className="sl-content-inner">
         <Flex justify="space-between" align="center">
           <BrandLogo
             height={26}

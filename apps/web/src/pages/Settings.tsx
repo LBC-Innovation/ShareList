@@ -124,18 +124,30 @@ export function Settings() {
   const isConnected = (providerName: string) =>
     connected.some(c => c.provider === providerName)
 
+  const connection = (providerName: string) =>
+    connected.find(c => c.provider === providerName)
+
   const connectedAt = (providerName: string) => {
-    const svc = connected.find(c => c.provider === providerName)
+    const svc = connection(providerName)
     if (!svc) return null
     return new Date(svc.connectedAt).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
     })
   }
 
+  const accountCaption = (providerName: string) => {
+    const svc = connection(providerName)
+    if (!svc) return null
+    if (svc.providerEmail) return svc.providerEmail
+    if (providerName === 'apple_music') return 'Apple ID connected'
+    if (providerName === 'spotify') return 'Reconnect to see the account email'
+    return null
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Content style={{ maxWidth: '800px', margin: '0 auto', padding: isCompact ? '20px 16px 28px' : '32px 24px 28px' }}>
+    <Content>
       {contextHolder}
 
       <Title
@@ -185,6 +197,8 @@ export function Settings() {
             const meta = PROVIDER_META[provider.name] ?? { color: SL.accent, icon: '🎵' }
             const connected_ = isConnected(provider.name)
             const connectedDate = connectedAt(provider.name)
+            const caption = accountCaption(provider.name)
+            const needsReconnect = connected_ && provider.name === 'spotify' && !connection(provider.name)?.providerEmail
 
             return (
               <div
@@ -216,29 +230,45 @@ export function Settings() {
                         {provider.displayName}
                       </Text>
                       {connected_ && connectedDate ? (
-                        <Flex vertical={isCompact} align={isCompact ? 'flex-start' : 'center'} gap={isCompact ? 4 : 6}>
-                          <Tag
-                            icon={<CheckOutlined />}
-                            style={{
-                              background: 'rgba(74, 222, 128, 0.12)',
-                              border: '1px solid rgba(74, 222, 128, 0.3)',
-                              color: SL.mint,
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              padding: '1px 8px',
-                              margin: 0,
-                              lineHeight: '18px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            Connected
-                          </Tag>
-                          <Text style={{ color: SL.muted, fontSize: '12px', whiteSpace: 'nowrap' }}>
-                            since {connectedDate}
-                          </Text>
+                        <Flex vertical gap={isCompact ? 4 : 6}>
+                          <Flex vertical={isCompact} align={isCompact ? 'flex-start' : 'center'} gap={isCompact ? 4 : 6}>
+                            <Tag
+                              icon={<CheckOutlined />}
+                              style={{
+                                background: 'rgba(74, 222, 128, 0.12)',
+                                border: '1px solid rgba(74, 222, 128, 0.3)',
+                                color: SL.mint,
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                padding: '1px 8px',
+                                margin: 0,
+                                lineHeight: '18px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              Connected
+                            </Tag>
+                            <Text style={{ color: SL.muted, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                              since {connectedDate}
+                            </Text>
+                          </Flex>
+                          {caption && (
+                            <Text
+                              style={{
+                                color: SL.muted,
+                                fontSize: '12px',
+                                display: 'block',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {caption}
+                            </Text>
+                          )}
                         </Flex>
                       ) : (
                         <Text style={{ color: SL.muted, fontSize: '13px' }}>Not connected</Text>
@@ -248,6 +278,25 @@ export function Settings() {
 
                   {/* Action button */}
                   {connected_ ? (
+                    <Flex vertical={isCompact} align={isCompact ? 'stretch' : 'center'} gap={8} style={{ flexShrink: 0 }}>
+                      {needsReconnect && (
+                        <Button
+                          block={isCompact}
+                          onClick={() => setLinkProvider(provider)}
+                          style={{
+                            background: `${meta.color}18`,
+                            border: `1px solid ${meta.color}44`,
+                            color: meta.color,
+                            borderRadius: '10px',
+                            height: '36px',
+                            padding: '0 16px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Reconnect
+                        </Button>
+                      )}
                     <Popconfirm
                       title={`Disconnect ${provider.displayName}?`}
                       description="Your playlists from this service will no longer be accessible in ShareList."
@@ -275,6 +324,7 @@ export function Settings() {
                         Disconnect
                       </Button>
                     </Popconfirm>
+                    </Flex>
                   ) : (
                     <Button
                       block={isCompact}

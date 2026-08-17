@@ -205,7 +205,7 @@ export function ShareListsView() {
   const invited = useMemo(() => lists.filter(list => !!list.isShared), [lists])
 
   return (
-    <Content style={{ maxWidth: '480px', margin: '0 auto', padding: '24px 16px 28px', width: '100%' }}>
+    <Content>
 
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>

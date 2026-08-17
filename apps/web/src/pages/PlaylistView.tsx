@@ -228,7 +228,7 @@ export function PlaylistView() {
   })
 
   return (
-    <Content style={{ maxWidth: '480px', margin: '0 auto', padding: '20px 16px 28px', width: '100%' }}>
+    <Content>
       {contextHolder}
 
       {/* Error state */}
