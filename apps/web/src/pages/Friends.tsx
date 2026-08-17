@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Layout, Card, Flex, Typography, Tabs, Form, Input, Select, Button, Empty,
-  Skeleton, notification, Tag, Switch, Popconfirm, Grid,
+  Skeleton, notification, Tag, Switch, Popconfirm, Grid, Collapse,
 } from 'antd'
 import { MailOutlined, UserAddOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons'
-import { Users } from 'lucide-react'
+import { ChevronDown, ChevronLeft, Users } from 'lucide-react'
 import * as api from '../lib/api'
 import type { FriendPerson, IncomingShareRequest, ShareListSummary } from '../lib/api'
 
@@ -125,7 +125,7 @@ export function Friends() {
   const screens = Grid.useBreakpoint()
   const isCompact = !screens.md
   const tabParam = searchParams.get('tab')
-  const activeTab = tabParam === 'my-friends' || tabParam === 'pending' ? tabParam : 'add'
+  const activeTab = tabParam === 'pending' ? 'pending' : 'my-friends'
 
   const [lists, setLists] = useState<ShareListSummary[]>([])
   const [people, setPeople] = useState<FriendPerson[]>([])
@@ -133,6 +133,7 @@ export function Friends() {
   const [listsLoading, setListsLoading] = useState(true)
   const [friendsLoading, setFriendsLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [addFriendOpen, setAddFriendOpen] = useState(false)
   const [removingKey, setRemovingKey] = useState<string | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
   const [form] = Form.useForm()
@@ -170,7 +171,7 @@ export function Friends() {
       }
       notifyApi.success({ message: 'Invite sent', description: `We emailed ${values.email}.`, placement: 'topRight' })
       form.resetFields()
-      setSearchParams({ tab: 'my-friends' })
+      setAddFriendOpen(false)
       void loadFriends({ silent: true })
     } finally {
       setSending(false)
@@ -254,77 +255,138 @@ export function Friends() {
     }
   }
 
-  const addFriendTab = (
-    <div style={{ paddingTop: '8px' }}>
-      <Card
-        style={{
-          background: 'rgba(28, 31, 33, 0.4)',
-          border: '1px solid rgba(56, 189, 248, 0.15)',
-          borderRadius: '16px',
-          backdropFilter: 'blur(20px)',
-        }}
-        styles={{ body: { padding: '32px' } }}
-      >
-        <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '20px', lineHeight: 1.6 }}>
-          Enter a friend’s email and pick a ShareList. We’ll send them an invite to manage it with you.
-        </Text>
-        <Form form={form} layout="vertical" onFinish={values => void handleInvite(values)} requiredMark={false}>
-          <Form.Item
-            name="email"
-            label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>Friend’s email</span>}
-            rules={[{ required: true, message: 'Enter an email' }, { type: 'email', message: 'Enter a valid email' }]}
-          >
-            <Input
-              prefix={<MailOutlined style={{ color: SL.muted }} />}
-              placeholder="friend@email.com"
-              size="large"
-              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: SL.text }}
-            />
-          </Form.Item>
-          <Form.Item
-            name="sharelistId"
-            label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>ShareList to share</span>}
-            rules={[{ required: true, message: 'Select a ShareList' }]}
-          >
-            <Select
-              placeholder={listsLoading ? 'Loading lists…' : 'Choose a ShareList'}
-              size="large"
-              loading={listsLoading}
-              options={ownedLists.map(list => ({ value: list.id, label: list.name }))}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            block
-            loading={sending}
-            icon={<UserAddOutlined />}
-            disabled={ownedLists.length === 0}
-            style={{
-              height: '48px',
-              borderRadius: '12px',
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-              border: 'none',
-              color: '#FFFFFF',
-            }}
-          >
-            <span style={{ color: '#FFFFFF' }}>Send invite</span>
-          </Button>
-          {!listsLoading && ownedLists.length === 0 && (
-            <Text style={{ color: SL.muted, fontSize: '12px', display: 'block', marginTop: '12px' }}>
-              Create a ShareList first, then you can invite a friend.
+  const addFriendAccordion = (
+    <Collapse
+      accordion
+      className="sl-add-friend-collapse"
+      activeKey={addFriendOpen ? ['add'] : []}
+      onChange={keys => {
+        const key = Array.isArray(keys) ? keys[0] : keys
+        setAddFriendOpen(key === 'add')
+      }}
+      bordered={false}
+      expandIconPlacement="end"
+      expandIcon={({ isActive }) =>
+        isActive
+          ? <ChevronDown size={18} strokeWidth={2.75} color="#F1F5F9" />
+          : <ChevronLeft size={18} strokeWidth={2.75} color="#F1F5F9" />
+      }
+      style={{
+        background: 'rgba(28, 31, 33, 0.4)',
+        border: '1px solid rgba(56, 189, 248, 0.15)',
+        borderRadius: '16px',
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+      }}
+      styles={{
+        header: {
+          color: SL.text,
+          fontWeight: 700,
+          fontSize: '15px',
+          padding: isCompact ? '12px 16px' : '14px 20px',
+          alignItems: 'center',
+          minHeight: '56px',
+          cursor: 'pointer',
+        },
+        icon: {
+          color: SL.text,
+        },
+        body: {
+          borderTop: '1px solid rgba(56, 189, 248, 0.1)',
+          padding: isCompact ? '20px 16px 24px' : '24px 32px 32px',
+          background: 'transparent',
+        },
+      }}
+      items={[{
+        key: 'add',
+        label: (
+          <Flex align="center" gap={12}>
+            <span
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: SL.accent,
+                flexShrink: 0,
+                fontSize: '16px',
+              }}
+            >
+              <UserAddOutlined />
+            </span>
+            Add New Friend
+          </Flex>
+        ),
+        children: (
+          <>
+            <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '20px', lineHeight: 1.6 }}>
+              Enter a friend’s email and pick a ShareList. We’ll send them an invite to manage it with you.
             </Text>
-          )}
-        </Form>
-      </Card>
-    </div>
+            <Form form={form} layout="vertical" onFinish={values => void handleInvite(values)} requiredMark={false}>
+              <Form.Item
+                name="email"
+                label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>Friend’s email</span>}
+                rules={[{ required: true, message: 'Enter an email' }, { type: 'email', message: 'Enter a valid email' }]}
+              >
+                <Input
+                  prefix={<MailOutlined style={{ color: SL.muted }} />}
+                  placeholder="friend@email.com"
+                  size="large"
+                  style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: SL.text }}
+                />
+              </Form.Item>
+              <Form.Item
+                name="sharelistId"
+                label={<span style={{ color: SL.text, fontWeight: 600, fontSize: '13px' }}>ShareList to share</span>}
+                rules={[{ required: true, message: 'Select a ShareList' }]}
+              >
+                <Select
+                  placeholder={listsLoading ? 'Loading lists…' : 'Choose a ShareList'}
+                  size="large"
+                  loading={listsLoading}
+                  options={ownedLists.map(list => ({ value: list.id, label: list.name }))}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                block
+                loading={sending}
+                icon={<UserAddOutlined />}
+                disabled={ownedLists.length === 0}
+                style={{
+                  height: '48px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                }}
+              >
+                <span style={{ color: '#FFFFFF' }}>Send invite</span>
+              </Button>
+              {!listsLoading && ownedLists.length === 0 && (
+                <Text style={{ color: SL.muted, fontSize: '12px', display: 'block', marginTop: '12px' }}>
+                  Create a ShareList first, then you can invite a friend.
+                </Text>
+              )}
+            </Form>
+          </>
+        ),
+      }]}
+    />
   )
 
   const myFriendsTab = (
     <div style={{ paddingTop: '8px' }}>
+      <Flex vertical gap={16}>
+        {addFriendAccordion}
       <Card
         style={{
           background: 'rgba(28, 31, 33, 0.4)',
@@ -364,7 +426,7 @@ export function Friends() {
               image={<Users style={{ width: '48px', height: '48px', color: SL.muted, opacity: 0.5 }} />}
               description={
                 <Text style={{ color: SL.muted, fontSize: '13px' }}>
-                  No friends yet. Send an invite from Add Friend.
+                  No friends yet. Expand Add New Friend to send an invite.
                 </Text>
               }
             />
@@ -540,6 +602,7 @@ export function Friends() {
           })
         )}
       </Card>
+      </Flex>
     </div>
   )
 
@@ -722,9 +785,8 @@ export function Friends() {
       </Title>
       <Tabs
         activeKey={activeTab}
-        onChange={key => setSearchParams(key === 'add' ? {} : { tab: key })}
+        onChange={key => setSearchParams(key === 'my-friends' ? {} : { tab: key })}
         items={[
-          { key: 'add', label: 'Add Friend', children: addFriendTab },
           { key: 'my-friends', label: 'My Friends', children: myFriendsTab },
           { key: 'pending', label: 'Pending Requests', children: pendingRequestsTab },
         ]}

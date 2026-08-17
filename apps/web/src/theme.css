@@ -369,6 +369,25 @@ input {
   overflow: auto;
 }
 
+.sl-add-friend-collapse.ant-collapse {
+  background: transparent;
+}
+
+.sl-add-friend-collapse .ant-collapse-item {
+  border: none;
+}
+
+.sl-add-friend-collapse .ant-collapse-header {
+  cursor: pointer;
+}
+
+.sl-add-friend-collapse .ant-collapse-expand-icon,
+.sl-add-friend-collapse .ant-collapse-arrow,
+.sl-add-friend-collapse .ant-collapse-expand-icon svg,
+.sl-add-friend-collapse .ant-collapse-arrow svg {
+  transform: none !important;
+}
+
 .sl-brand-wordmark,
 .sl-brand-mark {
   display: block;
