@@ -30,6 +30,10 @@ export function isIosDevice(): boolean {
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
+export function isIosStandalone(): boolean {
+  return isIosDevice() && isStandaloneDisplay()
+}
+
 export function isInstallDismissed(): boolean {
   try {
     return localStorage.getItem(DISMISS_KEY) === '1'
@@ -53,31 +57,58 @@ export function applyStandaloneClass(): void {
   document.documentElement.classList.toggle('sl-standalone', standalone)
 }
 
+function largeViewportHeight(): number {
+  const probe = document.createElement('div')
+  probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100lvh;visibility:hidden;pointer-events:none'
+  document.documentElement.appendChild(probe)
+  const height = probe.getBoundingClientRect().height
+  probe.remove()
+  return height || window.innerHeight
+}
+
+function readSafeInset(side: 'top' | 'bottom'): number {
+  const probe = document.createElement('div')
+  probe.setAttribute('aria-hidden', 'true')
+  probe.style.position = 'fixed'
+  probe.style.visibility = 'hidden'
+  probe.style.pointerEvents = 'none'
+  probe.style.setProperty(`padding-${side}`, `constant(safe-area-inset-${side})`)
+  probe.style.setProperty(`padding-${side}`, `env(safe-area-inset-${side}, 0px)`)
+  document.documentElement.appendChild(probe)
+  const value = Number.parseFloat(getComputedStyle(probe).getPropertyValue(`padding-${side}`)) || 0
+  probe.remove()
+  return value
+}
+
 /**
- * Pin the app chrome to the visible iOS viewport.
- *
- * Standalone WebKit reports a shorter `100dvh` / `-webkit-fill-available` than
- * the layout viewport used for hit-testing. Mixing `top`, `bottom`, and `height`
- * on a `position: fixed` shell then paints the UI short (black gap under the
- * nav) while taps still land where the full-height box would be.
- *
- * `--sl-app-height` is the larger of `innerHeight` and `visualViewport.height`
- * so paint fills the same box taps already use.
+ * Safari's layout viewport is the visible page (above the toolbar).
+ * iOS Home Screen PWAs still *report* that same small viewport even though
+ * the toolbar is gone, which leaves a toolbar-sized hole under the footer.
+ * In standalone, size the frame to 100lvh (large viewport, no browser chrome).
  */
-export function lockVisualViewport(): void {
+export function lockAppFrame(): void {
   const root = document.documentElement
   let frame = 0
 
   const apply = (): void => {
     frame = 0
-    const vv = window.visualViewport
-    const width = Math.max(window.innerWidth, vv?.width ?? 0)
-    const height = Math.max(window.innerHeight, vv?.height ?? 0)
-    root.style.setProperty('--sl-vv-top', `${vv?.offsetTop ?? 0}px`)
-    root.style.setProperty('--sl-vv-left', `${vv?.offsetLeft ?? 0}px`)
-    root.style.setProperty('--sl-app-width', `${width}px`)
-    root.style.setProperty('--sl-app-height', `${height}px`)
-    root.classList.add('sl-vv-locked')
+    const ios = isIosDevice()
+    const standalone = isStandaloneDisplay()
+    const sat = readSafeInset('top')
+    const sab = readSafeInset('bottom')
+    root.style.setProperty('--sl-safe-top', `${sat || (ios && standalone ? 47 : 0)}px`)
+    root.style.setProperty('--sl-safe-bottom', `${sab || (ios && standalone ? 34 : 0)}px`)
+
+    if (standalone) {
+      const height = Math.max(
+        largeViewportHeight(),
+        window.outerHeight || 0,
+        window.innerHeight,
+      )
+      root.style.setProperty('--sl-app-height', `${height}px`)
+    } else {
+      root.style.removeProperty('--sl-app-height')
+    }
   }
 
   const sync = (): void => {
@@ -86,10 +117,9 @@ export function lockVisualViewport(): void {
   }
 
   apply()
-  window.visualViewport?.addEventListener('resize', sync)
-  window.visualViewport?.addEventListener('scroll', sync)
   window.addEventListener('resize', sync)
   window.addEventListener('orientationchange', sync)
+  window.visualViewport?.addEventListener('resize', sync)
 }
 
 export function getDeferredPrompt(): BeforeInstallPromptEvent | null {

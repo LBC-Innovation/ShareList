@@ -25,6 +25,7 @@ import {
 } from '@ant-design/icons'
 import * as api from '../lib/api'
 import type { StreamingProvider, ConnectedService } from '../lib/api'
+import { noteDocumentNavigation } from '../lib/pwa-debug'
 
 const { Text, Title } = Typography
 
@@ -123,6 +124,7 @@ export function LinkPlatformModal({ onClose, onConnected }: LinkPlatformModalPro
 
       // ── Spotify: redirect-based OAuth ──────────────────────────────────────
       if (activeProvider.name === 'spotify') {
+        noteDocumentNavigation(url, 'spotify-oauth-leave')
         window.location.href = url   // browser leaves page; callback redirects back
         return
       }

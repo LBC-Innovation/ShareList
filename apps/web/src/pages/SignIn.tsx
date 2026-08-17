@@ -18,6 +18,7 @@ export function SignIn() {
   const [loading, setLoading] = useState(false)
   const invite = searchParams.get('invite')
   const next = searchParams.get('next')
+  const expired = searchParams.get('reason') === 'expired'
 
   const handleFinish = async (values: { email: string; password: string }) => {
     setError(null)
@@ -118,6 +119,12 @@ export function SignIn() {
               Forgot password?
             </Link>
           </Flex>
+
+          {expired && !error && (
+            <Form.Item style={{ marginBottom: '16px' }}>
+              <Alert message="Your session expired. Sign in again." type="info" showIcon style={{ borderRadius: '10px' }} />
+            </Form.Item>
+          )}
 
           {error && (
             <Form.Item style={{ marginBottom: '16px' }}>

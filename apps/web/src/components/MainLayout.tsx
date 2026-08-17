@@ -2,19 +2,21 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { TopNavigation } from './TopNavigation'
 import { BottomNavigation } from './BottomNavigation'
 import { BootScreen } from './BootScreen'
+import { StatusBanner } from './StatusBanner'
 import { useAuth } from '../context/AuthContext'
 
 export function MainLayout() {
-  const { user, loading } = useAuth()
+  const { user, loading, session } = useAuth()
   const location = useLocation()
 
   if (loading) {
     return <BootScreen />
   }
 
-  if (!user) {
+  if (session !== 'authenticated' || !user) {
     const next = encodeURIComponent(location.pathname + location.search)
-    return <Navigate to={`/signin?next=${next}`} replace />
+    const expired = session === 'expired' ? '&reason=expired' : ''
+    return <Navigate to={`/signin?next=${next}${expired}`} replace />
   }
 
   return (
@@ -31,6 +33,7 @@ export function MainLayout() {
       />
 
       <TopNavigation />
+      <StatusBanner />
 
       <div className="sl-app-shell-content">
         <div className="sl-page">

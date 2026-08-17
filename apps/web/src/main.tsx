@@ -1,11 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
 import 'antd/dist/reset.css'
 import './index.css'
 import App from './App.tsx'
+import { AppRouter } from './components/AppRouter'
 import { AuthProvider } from './context/AuthContext.tsx'
-import { applyStandaloneClass, initPwaInstallListener, lockVisualViewport } from './lib/pwa'
+import { applyStandaloneClass, initPwaInstallListener, lockAppFrame } from './lib/pwa'
+import { initConnectivity } from './lib/connectivity'
+import { initPwaDebug } from './lib/pwa-debug'
+import { initPwaUpdateListener } from './lib/pwa-update'
 
 // Handle Supabase hash-based redirects (magic link, password reset, etc.)
 // before React mounts. The root route redirects immediately and strips the
@@ -23,18 +26,21 @@ import { applyStandaloneClass, initPwaInstallListener, lockVisualViewport } from
 })()
 
 applyStandaloneClass()
-lockVisualViewport()
+lockAppFrame()
 initPwaInstallListener()
+initConnectivity()
+initPwaDebug()
+initPwaUpdateListener()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element not found')
 
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
+    <AppRouter>
       <AuthProvider>
         <App />
       </AuthProvider>
-    </BrowserRouter>
+    </AppRouter>
   </StrictMode>,
 )

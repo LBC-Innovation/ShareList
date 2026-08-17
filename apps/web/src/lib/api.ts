@@ -1,6 +1,17 @@
 import type { User, ApiResult, ApiError } from '@sharelist/shared'
+import { classifyHttpError, unavailableError } from './api-errors'
+import { reportApiReachable, reportApiUnreachable } from './connectivity'
+
+export {
+  ERROR_FORBIDDEN,
+  ERROR_UNAUTHENTICATED,
+  ERROR_UNAVAILABLE,
+  isUnauthenticated,
+  isUnavailable,
+} from './api-errors'
 
 const API_URL = import.meta.env.VITE_API_URL
+const SESSION_HINT_KEY = 'sl_session_hint'
 
 // Shape returned by /auth/login and /auth/register
 export interface AuthSession {
@@ -26,19 +37,88 @@ export function storeToken(token: string): void {
 
 export function clearToken(): void {
   localStorage.removeItem('sl_access_token')
+  clearSessionHint()
+}
+
+export function hasSessionToken(): boolean {
+  return Boolean(getToken())
+}
+
+export interface SessionHint {
+  id: string
+  email: string
+}
+
+export function storeSessionHint(hint: SessionHint): void {
+  try {
+    localStorage.setItem(SESSION_HINT_KEY, JSON.stringify(hint))
+  } catch {
+    // ignore quota / private-mode failures
+  }
+}
+
+export function readSessionHint(): SessionHint | null {
+  try {
+    const raw = localStorage.getItem(SESSION_HINT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<SessionHint>
+    if (typeof parsed.id === 'string' && typeof parsed.email === 'string') {
+      return { id: parsed.id, email: parsed.email }
+    }
+  } catch {
+    // ignore malformed hint
+  }
+  return null
+}
+
+export function clearSessionHint(): void {
+  try {
+    localStorage.removeItem(SESSION_HINT_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+function trackResult<T>(result: ApiResult<T>): ApiResult<T> {
+  if (result.error?.code === 'UNAVAILABLE') reportApiUnreachable()
+  else reportApiReachable()
+  return result
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
   const token = getToken()
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers ?? {}),
-    },
-  })
-  return res.json() as Promise<ApiResult<T>>
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers ?? {}),
+      },
+    })
+
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch {
+      return trackResult(unavailableError(res.ok ? 'Invalid response' : 'ShareList is unreachable') as ApiResult<T>)
+    }
+
+    if (!res.ok) {
+      return trackResult(classifyHttpError(res.status, body) as ApiResult<T>)
+    }
+
+    if (body && typeof body === 'object' && 'error' in body && (body as ApiError).error) {
+      const classified = classifyHttpError(res.status >= 400 ? res.status : 400, body)
+      return trackResult(classified as ApiResult<T>)
+    }
+
+    return trackResult(body as ApiResult<T>)
+  } catch (err) {
+    const aborted = err instanceof DOMException && err.name === 'AbortError'
+    const message = aborted ? 'Request timed out' : 'ShareList is unreachable'
+    return trackResult(unavailableError(message) as ApiResult<T>)
+  }
 }
 
 export function isError(result: ApiResult<unknown>): result is ApiError {
