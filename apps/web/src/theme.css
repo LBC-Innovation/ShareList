@@ -370,14 +370,28 @@ input {
 }
 
 /* Taller Select controls and options for mobile tap targets */
-.ant-select-single .ant-select-selector {
-  min-height: 52px;
-  padding-block: 12px;
-}
-
-.ant-select-single.ant-select-lg .ant-select-selector {
+.ant-select {
+  --ant-select-height: 56px;
+  --ant-select-padding-vertical: 14px;
+  --ant-select-padding-horizontal: 16px;
   min-height: 56px;
   padding-block: 14px;
+  padding-inline: 16px;
+}
+
+.ant-select-lg {
+  --ant-select-height: 60px;
+  --ant-select-padding-vertical: 16px;
+  --ant-select-padding-horizontal: 18px;
+  min-height: 60px;
+  padding-block: 16px;
+  padding-inline: 18px;
+}
+
+.ant-select-single .ant-select-selector {
+  min-height: 100%;
+  padding-block: 0;
+  padding-inline: 0;
 }
 
 .ant-select-dropdown .ant-select-item,

@@ -55,7 +55,7 @@ function App() {
           Select: {
             optionPadding: '18px 12px',
             optionHeight: 56,
-            singleItemHeightLG: 56,
+            singleItemHeightLG: 60,
           },
           Table: {
             headerBg: 'rgba(28, 31, 33, 0.6)',
