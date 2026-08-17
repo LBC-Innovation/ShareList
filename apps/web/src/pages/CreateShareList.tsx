@@ -46,6 +46,29 @@ function inviteEmailError(email: string, existing: string[], ownEmail?: string |
 const { Content } = Layout
 const { Title, Text } = Typography
 
+function ServiceSelectorValue({
+  option,
+  connected,
+}: {
+  option: { label: string; icon: typeof faSpotify; color: string }
+  connected: boolean
+}) {
+  return (
+    <Flex align="center">
+      <span
+        className={`sl-service-connected-check${connected ? ' is-in' : ''}`}
+        aria-hidden={!connected}
+      >
+        <CheckCircleOutlined style={{ fontSize: 18, color: '#4ADE80' }} />
+      </span>
+      <Flex align="center" gap={10}>
+        <FontAwesomeIcon icon={option.icon} style={{ fontSize: '18px', color: option.color }} />
+        <Text style={{ color: '#F1F5F9', fontSize: '14px', fontWeight: 500 }}>{option.label}</Text>
+      </Flex>
+    </Flex>
+  )
+}
+
 // ── Provider metadata ──────────────────────────────────────────────────────────
 const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; color: string }> = {
   spotify:     { label: 'Spotify',     icon: faSpotify, color: '#1DB954' },
@@ -71,6 +94,7 @@ export function CreateShareList() {
   const [inviteEmails, setInviteEmails]           = useState<string[]>([])
   const [inviteError, setInviteError]             = useState<string | null>(null)
   const [creating, setCreating]                   = useState(false)
+  const [serviceReady, setServiceReady]           = useState(false)
 
   // Load connected services on mount
   useEffect(() => {
@@ -90,6 +114,7 @@ export function CreateShareList() {
     setInviteEmail('')
     setInviteEmails([])
     setInviteError(null)
+    setServiceReady(false)
     setPlaylistsLoading(true)
     void (async () => {
       const result = await api.getStreamingPlaylists(selectedService)
@@ -99,6 +124,7 @@ export function CreateShareList() {
         return
       }
       setPlaylists(result.data)
+      setServiceReady(true)
     })()
   }, [selectedService]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -259,8 +285,14 @@ export function CreateShareList() {
                 value={selectedService || undefined}
                 onChange={v => setSelectedService(v as string)}
                 placeholder="Choose your music service"
+                className="sl-create-service-select"
                 style={{ width: '100%' }}
                 size="large"
+                labelRender={({ value }) => {
+                  const option = connectedOptions.find(opt => opt.value === value)
+                  if (!option) return undefined
+                  return <ServiceSelectorValue option={option} connected={serviceReady} />
+                }}
                 options={connectedOptions.map(opt => ({
                   value: opt.value,
                   label: (
@@ -290,13 +322,6 @@ export function CreateShareList() {
             {/* Step 3: Select playlist */}
             {selectedService && !playlistsLoading && playlists.length > 0 && (
               <>
-                <Flex align="center" gap={8} style={{ marginBottom: '16px' }}>
-                  <CheckCircleOutlined style={{ fontSize: '18px', color: '#4ADE80' }} />
-                  <Text style={{ color: '#4ADE80', fontSize: '13px', fontWeight: 600 }}>
-                    Connected to {selectedMeta?.label}
-                  </Text>
-                </Flex>
-
                 <Text style={{ color: '#F1F5F9', display: 'block', marginBottom: '12px', fontSize: '13px', fontWeight: 600 }}>
                   Select a Playlist
                 </Text>

@@ -67,6 +67,38 @@
   animation: sl-shuffle-spin 2.4s linear infinite;
 }
 
+/* Create ShareList — connected check slides into the service select */
+.sl-create-service-select.ant-select .ant-select-selection-item {
+  display: flex !important;
+  align-items: center;
+  overflow: hidden;
+}
+
+.sl-service-connected-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 0;
+  margin-right: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(-12px);
+  pointer-events: none;
+  transition:
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-right 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sl-service-connected-check.is-in {
+  width: 18px;
+  margin-right: 10px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .sl-user-menu-email.ant-dropdown-menu-item-disabled {
   opacity: 1;
   cursor: default;
