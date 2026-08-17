@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Card, Flex, Skeleton, Typography, notification } from 'antd'
 import { PlaylistHero } from '../components/PlaylistHero'
 import { SyncStatusBar } from '../components/SyncStatusBar'
@@ -61,6 +61,7 @@ function mapSharelistTracks(sharelist: ShareListDetail | null): Track[] {
 export function PlaylistView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const [notifyApi, contextHolder] = notification.useNotification()
 
   const [sharelist, setSharelist]         = useState<ShareListDetail | null>(null)
@@ -158,6 +159,36 @@ export function PlaylistView() {
   useEffect(() => {
     void loadShareList()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const state = location.state as { inviteSent?: string[]; inviteFailed?: string[] } | null
+    const inviteSent = state?.inviteSent ?? []
+    const inviteFailed = state?.inviteFailed ?? []
+    if (inviteSent.length === 0 && inviteFailed.length === 0) return
+
+    if (inviteSent.length === 1) {
+      notifyApi.success({
+        message: 'Invite sent',
+        description: `We emailed ${inviteSent[0]}.`,
+        placement: 'topRight',
+      })
+    } else if (inviteSent.length > 1) {
+      notifyApi.success({
+        message: 'Invites sent',
+        description: `We emailed ${inviteSent.length} friends to join this ShareList.`,
+        placement: 'topRight',
+      })
+    }
+    if (inviteFailed.length > 0) {
+      notifyApi.warning({
+        message: inviteFailed.length === 1 ? 'One invite could not be sent' : 'Some invites could not be sent',
+        description: inviteFailed.join(', '),
+        placement: 'topRight',
+        duration: 8,
+      })
+    }
+    navigate(location.pathname, { replace: true, state: null })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setDisplayTracks(mapSharelistTracks(sharelist))
