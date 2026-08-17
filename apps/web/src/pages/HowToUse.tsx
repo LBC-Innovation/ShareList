@@ -24,7 +24,7 @@ const STEPS: Step[] = [
   {
     n: '02',
     title: 'Create a ShareList',
-    body: 'From My Lists, create a ShareList and pick one of your playlists. That playlist is linked as the starting copy. The songs you see in ShareList come from the linked playlists, not from a separate ShareList library.',
+    body: 'From My Lists, create a ShareList, pick one of your playlists, and give the list a name. That name is the title you see on the ShareList. The linked playlist is the starting copy; songs come from linked playlists, not a separate ShareList library.',
   },
   {
     n: '03',
@@ -44,7 +44,7 @@ const STEPS: Step[] = [
   {
     n: '06',
     title: 'Refresh with Fetch Songs',
-    body: 'Fetch Songs only updates what you see in ShareList: playlist name, artwork, and the current song list. It does not add songs to Spotify or Apple Music.',
+    body: 'Fetch Songs only updates what you see in ShareList: linked playlist names, artwork, and the current song list. It does not change the ShareList title, and it does not add songs to Spotify or Apple Music.',
   },
   {
     n: '07',
@@ -54,7 +54,7 @@ const STEPS: Step[] = [
   {
     n: '08',
     title: 'Leave or delete without wiping friends',
-    body: "Manage List lets you unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
+    body: "Manage List lets you rename a list, unlink a playlist, leave a shared list, or delete a list you own. Streaming playlists are never deleted. If you own the list and delete it, friends keep the playlists they contributed as their own ShareLists. Songs are not removed from anyone's streaming playlist.",
   },
 ]
 
@@ -94,7 +94,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'primary',
         term: 'Primary playlist',
-        meaning: 'The main linked playlist on a ShareList. Its name and artwork are used for the ShareList cover.',
+        meaning: 'The main linked playlist on a ShareList. Its artwork is used for the ShareList cover. The ShareList title is the name you set, not the streaming playlist name.',
       },
     ],
   },
@@ -120,7 +120,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'manage',
         term: 'Manage List',
-        meaning: 'The panel on a ShareList for adding another playlist, unlinking one, leaving, or deleting (owner only).',
+        meaning: 'The panel on a ShareList for renaming, adding another playlist, unlinking one, leaving, or deleting (owner only).',
       },
     ],
   },
@@ -132,7 +132,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
         key: 'force-sync',
         term: 'Fetch Songs',
         accent: 'accent',
-        meaning: 'Reloads the ShareList in the app. Pulls fresh names, artwork, and songs from each linked playlist. Does not write anything back to Spotify or Apple Music.',
+        meaning: 'Reloads the ShareList in the app. Pulls fresh linked-playlist names, artwork, and songs. Does not change the ShareList title, and does not write anything back to Spotify or Apple Music.',
       },
       {
         key: 'cross-sync',

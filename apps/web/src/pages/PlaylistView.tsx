@@ -321,9 +321,13 @@ export function PlaylistView() {
       {showLinkModal && sharelist && (
         <LinkPlaylistModal
           sharelistId={sharelist.id}
+          name={sharelist.name}
           links={sharelist.links}
           isOwner={!sharelist.isShared}
           onClose={() => setShowLinkModal(false)}
+          onRenamed={nextName => {
+            setSharelist(current => current ? { ...current, name: nextName } : current)
+          }}
           onLinked={() => {
             setShowLinkModal(false)
             notifyApi.success({ message: 'Playlist linked!', placement: 'topRight' })

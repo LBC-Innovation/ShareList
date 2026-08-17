@@ -292,6 +292,7 @@ export function createShareList(data: {
   provider: string
   playlistId: string
   playlistName: string
+  name?: string
   imageUrl?: string | null
   externalUrl?: string | null
 }): Promise<ApiResult<ShareListSummary>> {
@@ -303,6 +304,16 @@ export function createShareList(data: {
 
 export function getShareList(id: string): Promise<ApiResult<ShareListDetail>> {
   return request<ShareListDetail>(`/sharelists/${id}`)
+}
+
+export function updateShareList(
+  id: string,
+  data: { name: string },
+): Promise<ApiResult<{ id: string; name: string }>> {
+  return request<{ id: string; name: string }>(`/sharelists/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
 }
 
 export function deleteShareList(id: string): Promise<ApiResult<{ deleted: boolean; left: boolean }>> {
