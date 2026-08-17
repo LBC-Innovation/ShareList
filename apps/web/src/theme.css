@@ -425,22 +425,29 @@ input {
   padding-inline: 0;
 }
 
-.sl-add-friend-collapse.ant-collapse {
+.sl-add-friend-collapse.ant-collapse,
+.sl-add-sharelist-collapse.ant-collapse {
   background: transparent;
 }
 
-.sl-add-friend-collapse .ant-collapse-item {
+.sl-add-friend-collapse .ant-collapse-item,
+.sl-add-sharelist-collapse .ant-collapse-item {
   border: none;
 }
 
-.sl-add-friend-collapse .ant-collapse-header {
+.sl-add-friend-collapse .ant-collapse-header,
+.sl-add-sharelist-collapse .ant-collapse-header {
   cursor: pointer;
 }
 
 .sl-add-friend-collapse .ant-collapse-expand-icon,
 .sl-add-friend-collapse .ant-collapse-arrow,
 .sl-add-friend-collapse .ant-collapse-expand-icon svg,
-.sl-add-friend-collapse .ant-collapse-arrow svg {
+.sl-add-friend-collapse .ant-collapse-arrow svg,
+.sl-add-sharelist-collapse .ant-collapse-expand-icon,
+.sl-add-sharelist-collapse .ant-collapse-arrow,
+.sl-add-sharelist-collapse .ant-collapse-expand-icon svg,
+.sl-add-sharelist-collapse .ant-collapse-arrow svg {
   transform: none !important;
 }
 
