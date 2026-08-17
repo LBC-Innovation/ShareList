@@ -188,12 +188,17 @@ sequenceDiagram
     Platform-->>API: Playlist catalog
     API-->>Web: [{ id, name, imageUrl, externalUrl }]
 
-    User->>Web: Pick a playlist and name the ShareList
+    User->>Web: Pick a playlist, name the ShareList, optionally add friend emails
     Web->>API: POST /sharelists { provider, playlistId, playlistName, name }
     API->>DB: INSERT sharelists (owner_id, name)
     API->>DB: INSERT sharelist_links (primary playlist)
     DB-->>API: new ShareList id
     API-->>Web: 201 ShareList summary
+    opt Friend emails queued
+        loop Each queued email
+            Web->>API: POST /friends/invites { email, sharelistId }
+        end
+    end
     Web->>Web: Navigate to /list/:id
 
     Web->>API: GET /sharelists/:id

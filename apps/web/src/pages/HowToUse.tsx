@@ -24,12 +24,12 @@ const STEPS: Step[] = [
   {
     n: '02',
     title: 'Create a ShareList',
-    body: 'From Lists, create a ShareList, pick one of your playlists, and give the list a name. That name is the title you see on the ShareList. The linked playlist is the starting copy; songs come from linked playlists, not a separate ShareList library.',
+    body: 'From Lists, create a ShareList, pick one of your playlists, and give the list a name. You can also add friend emails before you save; after the list is created they get the same join-request email as an invite from Friends. That name is the title you see on the ShareList. The linked playlist is the starting copy; songs come from linked playlists, not a separate ShareList library.',
   },
   {
     n: '03',
     title: 'Invite a friend',
-    body: 'On Friends, send an invite with an email and the ShareList you want to share. They get an email link, and if they already have an account they can also accept or reject it under Pending Requests. After they accept, shared lists show under Lists you\'ve been invited to.',
+    body: 'Invite from the create flow, or later on Friends with an email and the ShareList you want to share. They get an email link, and if they already have an account they can also accept or reject it under Pending Requests. After they accept, shared lists show under Lists you\'ve been invited to.',
   },
   {
     n: '04',
@@ -110,7 +110,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'invite',
         term: 'Invite',
-        meaning: 'An email with a link to join a specific ShareList. Pending invites can be resent or deleted from My Friends.',
+        meaning: 'An email with a link to join a specific ShareList. You can queue these while creating a list, or send them later from Friends. Pending invites can be resent or deleted from My Friends.',
       },
       {
         key: 'collaborator',

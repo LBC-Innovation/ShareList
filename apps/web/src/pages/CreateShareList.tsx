@@ -6,8 +6,8 @@
  *   2. If none connected → show "Connect a service first" prompt.
  *   3. User selects a connected service from dropdown.
  *   4. Fetch user's playlists for that service.
- *   5. User picks a playlist and names the ShareList.
- *   6. POST /sharelists → navigate to /list/:id.
+ *   5. User picks a playlist, names the ShareList, and optionally queues friend emails.
+ *   6. POST /sharelists, then POST /friends/invites for each queued email → navigate to /list/:id.
  */
 
 import { useEffect, useState } from 'react'
@@ -18,15 +18,56 @@ import {
   LoadingOutlined,
   LinkOutlined,
   ArrowRightOutlined,
+  PlusOutlined,
+  CloseOutlined,
+  MailOutlined,
 } from '@ant-design/icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
 import * as api from '../lib/api'
 import { notifyApiFailure } from '../lib/notify'
+import { useAuth } from '../context/AuthContext'
 import type { ConnectedService, StreamingPlaylist } from '../lib/api'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function inviteEmailError(email: string, existing: string[], ownEmail?: string | null): string | null {
+  if (!email) return 'Enter an email'
+  if (!EMAIL_RE.test(email)) return 'Enter a valid email'
+  if (ownEmail && email === ownEmail.trim().toLowerCase()) return 'You cannot invite yourself'
+  if (existing.includes(email)) return 'That email is already in the list'
+  return null
+}
 
 const { Content } = Layout
 const { Title, Text } = Typography
+
+function ServiceSelectorValue({
+  option,
+  connected,
+}: {
+  option: { label: string; icon: typeof faSpotify; color: string }
+  connected: boolean
+}) {
+  return (
+    <Flex align="center">
+      <span
+        className={`sl-service-connected-check${connected ? ' is-in' : ''}`}
+        aria-hidden={!connected}
+      >
+        <CheckCircleOutlined style={{ fontSize: 18, color: '#4ADE80' }} />
+      </span>
+      <Flex align="center" gap={10}>
+        <FontAwesomeIcon icon={option.icon} style={{ fontSize: '18px', color: option.color }} />
+        <Text style={{ color: '#F1F5F9', fontSize: '14px', fontWeight: 500 }}>{option.label}</Text>
+      </Flex>
+    </Flex>
+  )
+}
 
 // ── Provider metadata ──────────────────────────────────────────────────────────
 const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; color: string }> = {
@@ -36,6 +77,7 @@ const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; col
 
 export function CreateShareList() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [notifyApi, contextHolder] = notification.useNotification()
 
   // Connected services
@@ -48,7 +90,11 @@ export function CreateShareList() {
   const [playlistsLoading, setPlaylistsLoading]   = useState(false)
   const [selectedPlaylist, setSelectedPlaylist]   = useState<string>('')
   const [sharelistName, setSharelistName]         = useState('')
+  const [inviteEmail, setInviteEmail]             = useState('')
+  const [inviteEmails, setInviteEmails]           = useState<string[]>([])
+  const [inviteError, setInviteError]             = useState<string | null>(null)
   const [creating, setCreating]                   = useState(false)
+  const [serviceReady, setServiceReady]           = useState(false)
 
   // Load connected services on mount
   useEffect(() => {
@@ -65,6 +111,10 @@ export function CreateShareList() {
     setPlaylists([])
     setSelectedPlaylist('')
     setSharelistName('')
+    setInviteEmail('')
+    setInviteEmails([])
+    setInviteError(null)
+    setServiceReady(false)
     setPlaylistsLoading(true)
     void (async () => {
       const result = await api.getStreamingPlaylists(selectedService)
@@ -74,13 +124,47 @@ export function CreateShareList() {
         return
       }
       setPlaylists(result.data)
+      setServiceReady(true)
     })()
   }, [selectedService]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAddInviteEmail = () => {
+    if (creating) return
+    const email = normalizeEmail(inviteEmail)
+    const error = inviteEmailError(email, inviteEmails, user?.email)
+    if (error) {
+      setInviteError(error)
+      return
+    }
+    setInviteEmails(prev => [...prev, email])
+    setInviteEmail('')
+    setInviteError(null)
+  }
+
+  const handleRemoveInviteEmail = (email: string) => {
+    if (creating) return
+    setInviteEmails(prev => prev.filter(item => item !== email))
+  }
 
   const handleCreate = async () => {
     const playlist = playlists.find(p => p.id === selectedPlaylist)
     const name = sharelistName.trim()
     if (!playlist || !selectedService || !name) return
+
+    const emailsToInvite = [...inviteEmails]
+    const pending = normalizeEmail(inviteEmail)
+    if (pending) {
+      const error = inviteEmailError(pending, emailsToInvite, user?.email)
+      if (error) {
+        setInviteError(error)
+        return
+      }
+      emailsToInvite.push(pending)
+      setInviteEmails(emailsToInvite)
+      setInviteEmail('')
+      setInviteError(null)
+    }
+
     setCreating(true)
     try {
       const result = await api.createShareList({
@@ -95,7 +179,23 @@ export function CreateShareList() {
         notifyApiFailure(notifyApi, 'Failed to create ShareList', result)
         return
       }
-      navigate(`/list/${result.data.id}`)
+
+      const sharelistId = result.data.id
+      let inviteSent: string[] = []
+      let inviteFailed: string[] = []
+      if (emailsToInvite.length > 0) {
+        const inviteResults = await Promise.all(
+          emailsToInvite.map(email => api.sendFriendInvite(email, sharelistId)),
+        )
+        inviteFailed = emailsToInvite.filter((_, index) => api.isError(inviteResults[index]))
+        inviteSent = emailsToInvite.filter((_, index) => !api.isError(inviteResults[index]))
+      }
+
+      navigate(`/list/${sharelistId}`, {
+        state: inviteSent.length > 0 || inviteFailed.length > 0
+          ? { inviteSent, inviteFailed }
+          : undefined,
+      })
     } finally {
       setCreating(false)
     }
@@ -185,8 +285,14 @@ export function CreateShareList() {
                 value={selectedService || undefined}
                 onChange={v => setSelectedService(v as string)}
                 placeholder="Choose your music service"
+                className="sl-create-service-select"
                 style={{ width: '100%' }}
                 size="large"
+                labelRender={({ value }) => {
+                  const option = connectedOptions.find(opt => opt.value === value)
+                  if (!option) return undefined
+                  return <ServiceSelectorValue option={option} connected={serviceReady} />
+                }}
                 options={connectedOptions.map(opt => ({
                   value: opt.value,
                   label: (
@@ -216,13 +322,6 @@ export function CreateShareList() {
             {/* Step 3: Select playlist */}
             {selectedService && !playlistsLoading && playlists.length > 0 && (
               <>
-                <Flex align="center" gap={8} style={{ marginBottom: '16px' }}>
-                  <CheckCircleOutlined style={{ fontSize: '18px', color: '#4ADE80' }} />
-                  <Text style={{ color: '#4ADE80', fontSize: '13px', fontWeight: 600 }}>
-                    Connected to {selectedMeta?.label}
-                  </Text>
-                </Flex>
-
                 <Text style={{ color: '#F1F5F9', display: 'block', marginBottom: '12px', fontSize: '13px', fontWeight: 600 }}>
                   Select a Playlist
                 </Text>
@@ -295,6 +394,7 @@ export function CreateShareList() {
                   placeholder="Name this ShareList"
                   maxLength={100}
                   size="large"
+                  disabled={creating}
                   aria-label="ShareList name"
                   style={{
                     background: 'rgba(17, 19, 20, 0.5)',
@@ -306,6 +406,107 @@ export function CreateShareList() {
                 <Text style={{ color: '#64748B', fontSize: '12px', display: 'block', marginTop: '8px', lineHeight: 1.5 }}>
                   Shown as the title of this ShareList. It does not rename the playlist on {selectedMeta?.label ?? 'your music service'}.
                 </Text>
+
+                <Text style={{ color: '#F1F5F9', display: 'block', marginTop: '24px', marginBottom: '12px', fontSize: '13px', fontWeight: 600 }}>
+                  Invite friends
+                </Text>
+                <Flex gap={8} align="stretch">
+                  <Input
+                    value={inviteEmail}
+                    onChange={e => {
+                      setInviteEmail(e.target.value)
+                      if (inviteError) setInviteError(null)
+                    }}
+                    onPressEnter={event => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      handleAddInviteEmail()
+                    }}
+                    placeholder="friend@email.com"
+                    size="large"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    disabled={creating}
+                    prefix={<MailOutlined style={{ color: '#64748B' }} />}
+                    aria-label="Friend email"
+                    status={inviteError ? 'error' : undefined}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(17, 19, 20, 0.5)',
+                      border: '1px solid rgba(56, 189, 248, 0.15)',
+                      borderRadius: '12px',
+                      color: '#F1F5F9',
+                    }}
+                  />
+                  <Button
+                    icon={<PlusOutlined style={{ fontSize: 18 }} />}
+                    onClick={handleAddInviteEmail}
+                    disabled={creating}
+                    aria-label="Add email"
+                    style={{
+                      width: '60px',
+                      height: 'auto',
+                      alignSelf: 'stretch',
+                      flexShrink: 0,
+                      borderRadius: '12px',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      background: 'rgba(56, 189, 248, 0.12)',
+                      color: '#38BDF8',
+                    }}
+                  />
+                </Flex>
+                {inviteError ? (
+                  <Text style={{ color: '#F87171', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                    {inviteError}
+                  </Text>
+                ) : (
+                  <Text style={{ color: '#64748B', fontSize: '12px', display: 'block', marginTop: '8px', lineHeight: 1.5 }}>
+                    Optional. We’ll email a join request after this ShareList is created.
+                  </Text>
+                )}
+                {inviteEmails.length > 0 && (
+                  <Space direction="vertical" size={8} style={{ width: '100%', marginTop: '12px' }}>
+                    {inviteEmails.map(email => (
+                      <Flex
+                        key={email}
+                        align="center"
+                        justify="space-between"
+                        gap={12}
+                        style={{
+                          padding: '10px 12px',
+                          background: 'rgba(28, 31, 33, 0.6)',
+                          border: '1px solid rgba(56, 189, 248, 0.1)',
+                          borderRadius: '10px',
+                        }}
+                      >
+                        <Flex align="center" gap={10} style={{ minWidth: 0, flex: 1 }}>
+                          <MailOutlined style={{ color: '#38BDF8', flexShrink: 0 }} />
+                          <Text
+                            style={{
+                              color: '#F1F5F9',
+                              fontSize: '13px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {email}
+                          </Text>
+                        </Flex>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<CloseOutlined />}
+                          disabled={creating}
+                          onClick={() => handleRemoveInviteEmail(email)}
+                          aria-label={`Remove ${email}`}
+                          style={{ color: '#64748B', flexShrink: 0 }}
+                        />
+                      </Flex>
+                    ))}
+                  </Space>
+                )}
                 <Button
                   block
                   size="large"
@@ -323,7 +524,9 @@ export function CreateShareList() {
                     opacity: sharelistName.trim() ? 1 : 0.6,
                   }}
                 >
-                  {creating ? 'Creating…' : 'Create ShareList'}
+                  {creating
+                    ? (inviteEmails.length > 0 ? 'Creating and inviting…' : 'Creating…')
+                    : 'Create ShareList'}
                 </Button>
               </>
             )}
