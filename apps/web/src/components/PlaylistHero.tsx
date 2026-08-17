@@ -131,7 +131,7 @@ function MetaDetailsAccordion({
 
           {links.length > 0 && (
             <div style={{
-              borderTop: '1px dashed #161819',
+              borderTop: '1px dashed rgba(74, 222, 128, 0.55)',
               paddingTop: 14,
             }}>
               <div style={{ ...metaLabelStyle, marginBottom: 6 }}>Contributing Playlists</div>
