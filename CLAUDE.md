@@ -6,8 +6,8 @@ streaming services (Spotify, Apple Music, YouTube Music) and share playlists
 across platforms. It does not stream audio — it is a metadata and sharing layer.
 
 ## Monorepo structure
-/apps/web        → React frontend, deploys to Render
-/apps/api        → Node/Express backend, deploys to Render  
+/apps/web        → React frontend, deploys to Vercel (ShareList)
+/apps/api        → Node/Express backend, deploys to Vercel (ShareList-API)  
 /packages        → shared types, utilities, constants
 /scripts         → automation scripts (GitHub, tooling)
 /.claude/agents  → agent role definitions
@@ -16,7 +16,7 @@ across platforms. It does not stream audio — it is a metadata and sharing laye
 - Frontend: React, TypeScript, Ant Design (antd v6 + @ant-design/icons)
 - Backend: Node.js, Express, TypeScript
 - Database & auth: Supabase (Postgres + Auth)
-- Deployment: Render (both frontend and backend)
+- Deployment: Vercel (ShareList frontend, ShareList-API backend)
 - Logging: structured JSON logs, centralized and searchable
 
 ## GitHub workflow
@@ -122,6 +122,6 @@ request context. Logs should be easy to copy directly to Claude for diagnosis.
 
 ## Deployment rules
 - Never commit secrets or .env files
-- All env vars live in Render dashboard
+- All env vars live in the Vercel project settings (ShareList and ShareList-API)
 - Pushing to main triggers automatic deployment
 - Failed deploys must not affect the running production service

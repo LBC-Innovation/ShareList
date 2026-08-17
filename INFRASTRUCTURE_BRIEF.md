@@ -12,11 +12,11 @@ Structure will be:
 
 ## Deployment
 
-Both frontend and backend deploy to Render.
+Both frontend and backend deploy to Vercel as two separate projects.
 
-- Frontend: Render static site or web service
-- Backend: Render web service
-- Environment variables managed in Render dashboard
+- Frontend: Vercel project **ShareList** (`apps/web`)
+- Backend: Vercel project **ShareList-API** (`apps/api`, compiled Express)
+- Environment variables managed in each Vercel project's settings
 
 ## Database & auth
 

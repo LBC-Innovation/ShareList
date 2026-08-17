@@ -312,7 +312,7 @@ export function PlaylistView() {
           paddingBottom: '8px',
           lineHeight: 1.5,
         }}>
-          Created by {sharelist.ownerEmail}
+          List created by {sharelist.ownerEmail}
         </Text>
       )}
 
