@@ -107,12 +107,7 @@ function ShareListCard({ list, onOpen }: { list: ShareListSummary; onOpen: (id: 
             )}
           </Flex>
 
-          <Text style={{ color: '#64748B', fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-            {list.links.length} {list.links.length === 1 ? 'linked playlist' : 'linked playlists'}
-          </Text>
-
-          {/* Platform icons */}
-          <Flex align="center" gap={6}>
+          <Flex align="center" gap={8} wrap="wrap">
             {platforms.map(platform => {
               const meta = PROVIDER_ICONS[platform]
               if (!meta) return null
@@ -120,7 +115,7 @@ function ShareListCard({ list, onOpen }: { list: ShareListSummary; onOpen: (id: 
                 <div key={platform} style={{
                   width: '24px', height: '24px', borderRadius: '50%',
                   background: `${meta.color}20`, border: `1px solid ${meta.color}40`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
                   <FontAwesomeIcon icon={meta.icon} style={{ fontSize: '12px', color: meta.color }} />
                 </div>
@@ -131,6 +126,9 @@ function ShareListCard({ list, onOpen }: { list: ShareListSummary; onOpen: (id: 
                 No platforms
               </Tag>
             )}
+            <Text style={{ color: '#64748B', fontSize: '13px' }}>
+              {list.links.length} {list.links.length === 1 ? 'linked playlist' : 'linked playlists'}
+            </Text>
           </Flex>
         </div>
       </Flex>
