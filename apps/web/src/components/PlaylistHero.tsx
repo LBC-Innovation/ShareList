@@ -218,7 +218,7 @@ export function PlaylistHero({
       style={{
         borderRadius: '20px',
         overflow: 'hidden',
-        background: 'rgba(28, 31, 33, 0.6)',
+        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.09) 0%, rgba(74, 222, 128, 0.06) 50%, rgba(28, 31, 33, 0.6) 100%)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(56, 189, 248, 0.1)',
       }}
