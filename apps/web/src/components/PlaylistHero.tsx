@@ -91,7 +91,7 @@ function MetaDetailsAccordion({
         }}
       >
         <span style={{
-          color: '#F1F5F9',
+          color: '#64748B',
           fontSize: 13,
           fontWeight: 400,
           lineHeight: 1,
@@ -111,8 +111,8 @@ function MetaDetailsAccordion({
           }}
         >
           {open
-            ? <ChevronDown size={14} strokeWidth={2.75} color="#F1F5F9" />
-            : <ChevronLeft size={14} strokeWidth={2.75} color="#F1F5F9" />}
+            ? <ChevronDown size={14} strokeWidth={2.75} color="#64748B" />
+            : <ChevronLeft size={14} strokeWidth={2.75} color="#64748B" />}
         </span>
       </button>
 
