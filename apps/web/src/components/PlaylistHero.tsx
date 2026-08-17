@@ -96,7 +96,7 @@ function MetaDetailsAccordion({
           fontWeight: 400,
           lineHeight: 1,
         }}>
-          Meta Details
+          List Details
         </span>
         <span
           aria-hidden
@@ -131,7 +131,7 @@ function MetaDetailsAccordion({
 
           {links.length > 0 && (
             <div style={{
-              borderTop: '1px dashed rgba(148, 163, 184, 0.45)',
+              borderTop: '1px dashed #161819',
               paddingTop: 14,
             }}>
               <div style={{ ...metaLabelStyle, marginBottom: 6 }}>Contributing Playlists</div>
