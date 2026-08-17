@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Layout, Card, Flex, Typography, Tag, Skeleton } from 'antd'
-import { Users } from 'lucide-react'
+import { Layout, Card, Flex, Typography, Tag, Skeleton, Collapse, Grid } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
+import { ChevronDown, ChevronLeft, Users } from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
 import { useNavigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import type { ShareListSummary } from '../lib/api'
+import { CreateShareListForm } from '../components/CreateShareListForm'
 
 const { Content } = Layout
 const { Text, Title } = Typography
@@ -188,9 +190,13 @@ function ListSection({
 
 export function ShareListsView() {
   const navigate = useNavigate()
+  const screens = Grid.useBreakpoint()
+  const isCompact = !screens.md
   const [lists, setLists]       = useState<ShareListSummary[]>([])
   const [isLoading, setLoading] = useState(true)
   const [error, setError]       = useState<string | null>(null)
+  const [addShareListOpen, setAddShareListOpen] = useState(false)
+  const [createFormMounted, setCreateFormMounted] = useState(false)
 
   useEffect(() => {
     void (async () => {
@@ -203,6 +209,79 @@ export function ShareListsView() {
 
   const created = useMemo(() => lists.filter(list => !list.isShared), [lists])
   const invited = useMemo(() => lists.filter(list => !!list.isShared), [lists])
+
+  const addShareListAccordion = (
+    <Collapse
+      accordion
+      className="sl-add-sharelist-collapse"
+      activeKey={addShareListOpen ? ['add'] : []}
+      onChange={keys => {
+        const key = Array.isArray(keys) ? keys[0] : keys
+        const open = key === 'add'
+        setAddShareListOpen(open)
+        if (open) setCreateFormMounted(true)
+      }}
+      bordered={false}
+      expandIconPlacement="end"
+      expandIcon={({ isActive }) =>
+        isActive
+          ? <ChevronDown size={18} strokeWidth={2.75} color="#F1F5F9" />
+          : <ChevronLeft size={18} strokeWidth={2.75} color="#F1F5F9" />
+      }
+      style={{
+        background: 'rgba(28, 31, 33, 0.4)',
+        border: '1px solid rgba(56, 189, 248, 0.15)',
+        borderRadius: '16px',
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+      }}
+      styles={{
+        header: {
+          color: '#F1F5F9',
+          fontWeight: 700,
+          fontSize: '15px',
+          padding: isCompact ? '12px 16px' : '14px 20px',
+          alignItems: 'center',
+          minHeight: '56px',
+          cursor: 'pointer',
+        },
+        icon: {
+          color: '#F1F5F9',
+        },
+        body: {
+          borderTop: '1px solid rgba(56, 189, 248, 0.1)',
+          padding: isCompact ? '20px 16px 24px' : '24px 32px 32px',
+          background: 'transparent',
+        },
+      }}
+      items={[{
+        key: 'add',
+        label: (
+          <Flex align="center" gap={12}>
+            <span
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#38BDF8',
+                flexShrink: 0,
+                fontSize: '16px',
+              }}
+            >
+              <PlusOutlined />
+            </span>
+            Add new ShareList
+          </Flex>
+        ),
+        children: createFormMounted ? <CreateShareListForm /> : null,
+      }]}
+    />
+  )
 
   return (
     <Content>
@@ -221,40 +300,43 @@ export function ShareListsView() {
 
       {/* Error */}
       {error && (
-        <Card style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '16px' }}
+        <Card style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '16px', marginBottom: '28px' }}
               styles={{ body: { padding: '20px' } }}>
           <Text style={{ color: '#EF4444' }}>Failed to load ShareLists: {error}</Text>
         </Card>
       )}
 
-      {/* Loading skeletons */}
-      {isLoading && (
-        <Flex vertical gap={12}>
-          {[1, 2, 3].map(i => (
-            <Card key={i} style={{ background: 'rgba(28, 31, 33, 0.4)', border: '1px solid rgba(56, 189, 248, 0.1)', borderRadius: '16px' }}
-                  styles={{ body: { padding: '16px' } }}>
-              <Skeleton.Input active style={{ width: '100%', height: '64px', borderRadius: '10px' }} />
-            </Card>
-          ))}
-        </Flex>
-      )}
+      <Flex vertical gap={28}>
+        {addShareListAccordion}
 
-      {!isLoading && !error && (
-        <Flex vertical gap={28}>
-          <ListSection
-            title="Lists you've created"
-            empty="Tap Create below to link your first playlist and start sharing."
-            lists={created}
-            onOpen={id => navigate(`/list/${id}`)}
-          />
-          <ListSection
-            title="Lists you've been invited to"
-            empty="When a friend shares a list with you, it will show up here."
-            lists={invited}
-            onOpen={id => navigate(`/list/${id}`)}
-          />
-        </Flex>
-      )}
+        {isLoading && (
+          <Flex vertical gap={12}>
+            {[1, 2, 3].map(i => (
+              <Card key={i} style={{ background: 'rgba(28, 31, 33, 0.4)', border: '1px solid rgba(56, 189, 248, 0.1)', borderRadius: '16px' }}
+                    styles={{ body: { padding: '16px' } }}>
+                <Skeleton.Input active style={{ width: '100%', height: '64px', borderRadius: '10px' }} />
+              </Card>
+            ))}
+          </Flex>
+        )}
+
+        {!isLoading && !error && (
+          <>
+            <ListSection
+              title="Lists you've created"
+              empty="Expand Add new ShareList to link your first playlist and start sharing."
+              lists={created}
+              onOpen={id => navigate(`/list/${id}`)}
+            />
+            <ListSection
+              title="Lists you've been invited to"
+              empty="When a friend shares a list with you, it will show up here."
+              lists={invited}
+              onOpen={id => navigate(`/list/${id}`)}
+            />
+          </>
+        )}
+      </Flex>
     </Content>
   )
 }
