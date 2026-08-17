@@ -9,6 +9,7 @@
  *   GET    /sharelists           — list user's ShareLists with link metadata
  *   POST   /sharelists           — create new ShareList from a playlist link
  *   GET    /sharelists/:id       — ShareList detail + tracks from primary link
+ *   PATCH  /sharelists/:id       — rename a ShareList
  *   POST   /sharelists/:id/links — link an additional playlist to a ShareList
  *   DELETE /sharelists/:id/links/:linkId — unlink a playlist from a ShareList
  *   DELETE /sharelists/:id               — owner deletes (collaborators keep their links);
@@ -40,6 +41,15 @@ function trackFetchWarning(reason: unknown, playlistName: string): string {
     return `${playlistName}: Spotify only returns tracks for playlists the connected account owns or collaborates on`
   }
   return `${playlistName}: ${errMsg}`
+}
+
+const SHARELIST_NAME_MAX = 100
+
+function normalizeSharelistName(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return null
+  return trimmed.slice(0, SHARELIST_NAME_MAX)
 }
 
 function sendCaughtError(res: Response, err: unknown, logMessage: string, ctx: Record<string, unknown>): void {
@@ -240,16 +250,23 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   const userId = req.user!.id
-  const { provider, playlistId, playlistName, imageUrl, externalUrl } = req.body as {
+  const { provider, playlistId, playlistName, imageUrl, externalUrl, name } = req.body as {
     provider?: string
     playlistId?: string
     playlistName?: string
     imageUrl?: string
     externalUrl?: string
+    name?: string
   }
 
   if (!provider || !playlistId || !playlistName) {
     res.status(400).json({ data: null, error: { message: 'provider, playlistId, and playlistName are required' } })
+    return
+  }
+
+  const sharelistName = normalizeSharelistName(name) ?? normalizeSharelistName(playlistName)
+  if (!sharelistName) {
+    res.status(400).json({ data: null, error: { message: 'A ShareList name is required' } })
     return
   }
 
@@ -260,7 +277,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     // Create the ShareList
     const { data: list, error: listErr } = await supabaseAdmin
       .from('sharelists')
-      .insert({ owner_id: userId, name: playlistName })
+      .insert({ owner_id: userId, name: sharelistName })
       .select()
       .single()
 
@@ -284,12 +301,12 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
     if (linkErr) throw new Error(linkErr.message)
 
-    log('info', 'ShareList created', { sharelistId, userId, provider, playlistId })
+    log('info', 'ShareList created', { sharelistId, userId, provider, playlistId, name: sharelistName })
 
     res.status(201).json({
       data: {
         id: sharelistId,
-        name: playlistName,
+        name: sharelistName,
         ownerId: userId,
         createdAt: (list as SharelistRow).created_at,
         isShared: false,
@@ -397,6 +414,45 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 })
 
+// ── PATCH /sharelists/:id ─────────────────────────────────────────────────────
+//
+// Renames a ShareList. Does not change linked streaming playlists.
+
+router.patch('/:id', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const { id } = req.params as { id: string }
+  const name = normalizeSharelistName((req.body as { name?: unknown }).name)
+
+  if (!name) {
+    res.status(400).json({ data: null, error: { message: 'name is required' } })
+    return
+  }
+
+  try {
+    const list = await getAccessibleSharelist(userId, id)
+    if (!list) {
+      res.status(404).json({ data: null, error: { message: 'ShareList not found' } })
+      return
+    }
+
+    const { data: updated, error } = await supabaseAdmin
+      .from('sharelists')
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id, name')
+      .single()
+
+    if (error || !updated) throw new Error(error?.message ?? 'Failed to rename ShareList')
+
+    log('info', 'ShareList renamed', { sharelistId: id, userId, name })
+    res.json({ data: { id: updated.id as string, name: updated.name as string }, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'PATCH /sharelists/:id failed', { id, userId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
 // ── POST /sharelists/:id/sync ─────────────────────────────────────────────────
 //
 // Re-fetches live metadata (name, image) and tracks for every linked playlist,
@@ -446,15 +502,6 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
         link.provider_playlist_name = freshMeta.name
         link.provider_playlist_image_url = freshMeta.imageUrl ?? null
         if (freshMeta.externalUrl) link.provider_playlist_external_url = freshMeta.externalUrl
-
-        // Keep the ShareList's own name in sync with the primary playlist's name
-        if (link.is_primary && freshMeta.name !== (list as SharelistRow).name) {
-          await supabaseAdmin
-            .from('sharelists')
-            .update({ name: freshMeta.name, updated_at: new Date().toISOString() })
-            .eq('id', id)
-          ;(list as SharelistRow).name = freshMeta.name
-        }
 
         log('info', 'link metadata refreshed', {
           sharelistId: id,

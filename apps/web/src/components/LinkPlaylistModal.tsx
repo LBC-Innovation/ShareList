@@ -3,12 +3,12 @@
  *
  * Tabs:
  *   Add To List — pick a connected service and link a playlist.
- *   Edit List   — unlink an existing linked playlist (confirm via trash).
+ *   Edit List   — rename the ShareList, or unlink an existing linked playlist (confirm via trash).
  *   Delete      — permanently delete the ShareList.
  */
 
 import { useEffect, useState } from 'react'
-import { Modal, Select, Button, Typography, Flex, Space, Divider, Spin, Empty, notification, Tabs } from 'antd'
+import { Modal, Select, Button, Typography, Flex, Space, Divider, Spin, Empty, Input, notification, Tabs } from 'antd'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
 import { CheckCircleOutlined, LoadingOutlined, LinkOutlined, DeleteOutlined, ExclamationCircleFilled } from '@ant-design/icons'
@@ -30,15 +30,17 @@ const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; col
 
 interface LinkPlaylistModalProps {
   sharelistId: string
+  name: string
   links: ShareListLink[]
   isOwner: boolean
   onClose: () => void
   onLinked: () => void
   onUnlinked: () => void
+  onRenamed: (name: string) => void
   onDeleted: (result: { deleted: boolean; left: boolean }) => void
 }
 
-export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLinked, onUnlinked, onDeleted }: LinkPlaylistModalProps) {
+export function LinkPlaylistModal({ sharelistId, name, links, isOwner, onClose, onLinked, onUnlinked, onRenamed, onDeleted }: LinkPlaylistModalProps) {
   const [notifyApi, contextHolder] = notification.useNotification()
   const [activeTab, setActiveTab] = useState<'add' | 'edit' | 'delete'>('add')
 
@@ -55,6 +57,12 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
   const [unlinkingId, setUnlinkingId]     = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting]           = useState(false)
+  const [listName, setListName]           = useState(name)
+  const [savingName, setSavingName]       = useState(false)
+
+  useEffect(() => {
+    setListName(name)
+  }, [name])
 
   // Load connected services on open
   useEffect(() => {
@@ -120,6 +128,24 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
     }
   }
 
+  const handleSaveName = async () => {
+    const trimmed = listName.trim()
+    if (!trimmed) return
+    setSavingName(true)
+    try {
+      const result = await api.updateShareList(sharelistId, { name: trimmed })
+      if (api.isError(result)) {
+        notifyApi.error({ message: 'Failed to rename ShareList', description: result.error.message, placement: 'topRight' })
+        return
+      }
+      setListName(result.data.name)
+      onRenamed(result.data.name)
+      notifyApi.success({ message: 'ShareList renamed', placement: 'topRight' })
+    } finally {
+      setSavingName(false)
+    }
+  }
+
   const handleDeleteShareList = async () => {
     setDeleting(true)
     try {
@@ -157,6 +183,8 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
     .filter(Boolean) as { value: string; label: string; icon: typeof faSpotify; color: string }[]
 
   const selectedMeta = selectedService ? PROVIDER_META[selectedService] : null
+  const trimmedName = listName.trim()
+  const nameDirty = trimmedName.length > 0 && trimmedName !== name.trim()
 
   const addTabContent = (
     <>
@@ -275,6 +303,28 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
 
   const editTabContent = (
     <>
+      <Text style={{ color: SL.text, display: 'block', marginBottom: '12px', fontSize: '13px', fontWeight: 600 }}>
+        Name
+      </Text>
+      <Input
+        value={listName}
+        onChange={e => setListName(e.target.value)}
+        onPressEnter={() => { if (nameDirty) void handleSaveName() }}
+        placeholder="Name this ShareList"
+        maxLength={100}
+        size="large"
+        aria-label="ShareList name"
+        style={{
+          background: 'rgba(17, 19, 20, 0.5)',
+          border: '1px solid rgba(56, 189, 248, 0.15)',
+          borderRadius: '12px',
+          color: SL.text,
+        }}
+      />
+      <Text style={{ color: SL.muted, fontSize: '12px', display: 'block', marginTop: '8px', marginBottom: '20px', lineHeight: 1.5 }}>
+        Shown as the title of this ShareList. It does not rename playlists on Spotify or Apple Music.
+      </Text>
+
       {links.length === 0 ? (
         <Empty
           description={<Text style={{ color: SL.muted, fontSize: '13px' }}>No playlists linked to this ShareList yet</Text>}
@@ -505,6 +555,24 @@ export function LinkPlaylistModal({ sharelistId, links, isOwner, onClose, onLink
             >
               {activeTab === 'delete' ? 'Cancel' : activeTab === 'edit' ? 'Done' : 'Cancel'}
             </Button>
+            {activeTab === 'edit' && (
+              <Button
+                size="large"
+                loading={savingName}
+                disabled={!nameDirty}
+                onClick={() => void handleSaveName()}
+                style={{
+                  background: nameDirty ? 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)' : 'rgba(56, 189, 248, 0.1)',
+                  border: 'none', borderRadius: '10px', height: '44px', padding: '0 24px',
+                  fontSize: '14px', fontWeight: 700,
+                  color: nameDirty ? '#FFFFFF' : SL.muted,
+                  boxShadow: nameDirty ? '0 4px 16px rgba(56, 189, 248, 0.25)' : 'none',
+                  opacity: nameDirty ? 1 : 0.6,
+                }}
+              >
+                {savingName ? 'Saving…' : 'Save Name'}
+              </Button>
+            )}
             {activeTab === 'add' && (
               <Button
                 size="large"

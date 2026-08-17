@@ -6,13 +6,13 @@
  *   2. If none connected → show "Connect a service first" prompt.
  *   3. User selects a connected service from dropdown.
  *   4. Fetch user's playlists for that service.
- *   5. User picks a playlist.
+ *   5. User picks a playlist and names the ShareList.
  *   6. POST /sharelists → navigate to /list/:id.
  */
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Layout, Typography, Button, Card, Flex, Space, Divider, Select, Spin, Empty, notification } from 'antd'
+import { Layout, Typography, Button, Card, Flex, Space, Divider, Select, Spin, Empty, Input, notification } from 'antd'
 import {
   CheckCircleOutlined,
   LoadingOutlined,
@@ -47,6 +47,7 @@ export function CreateShareList() {
   const [playlists, setPlaylists]                 = useState<StreamingPlaylist[]>([])
   const [playlistsLoading, setPlaylistsLoading]   = useState(false)
   const [selectedPlaylist, setSelectedPlaylist]   = useState<string>('')
+  const [sharelistName, setSharelistName]         = useState('')
   const [creating, setCreating]                   = useState(false)
 
   // Load connected services on mount
@@ -63,6 +64,7 @@ export function CreateShareList() {
     if (!selectedService) return
     setPlaylists([])
     setSelectedPlaylist('')
+    setSharelistName('')
     setPlaylistsLoading(true)
     void (async () => {
       const result = await api.getStreamingPlaylists(selectedService)
@@ -77,13 +79,15 @@ export function CreateShareList() {
 
   const handleCreate = async () => {
     const playlist = playlists.find(p => p.id === selectedPlaylist)
-    if (!playlist || !selectedService) return
+    const name = sharelistName.trim()
+    if (!playlist || !selectedService || !name) return
     setCreating(true)
     try {
       const result = await api.createShareList({
         provider: selectedService,
         playlistId: playlist.id,
         playlistName: playlist.name,
+        name,
         imageUrl: playlist.imageUrl ?? null,
         externalUrl: playlist.externalUrl ?? null,
       })
@@ -106,7 +110,6 @@ export function CreateShareList() {
     .filter(Boolean) as { value: string; label: string; icon: typeof faSpotify; color: string }[]
 
   const selectedMeta = selectedService ? PROVIDER_META[selectedService] : null
-  const selectedPlaylistData = playlists.find(p => p.id === selectedPlaylist)
 
   return (
     <Content style={{ padding: '24px 16px 28px', width: '100%', maxWidth: '640px', margin: '0 auto' }}>
@@ -233,7 +236,10 @@ export function CreateShareList() {
                     {playlists.map(playlist => (
                       <div
                         key={playlist.id}
-                        onClick={() => setSelectedPlaylist(playlist.id)}
+                        onClick={() => {
+                          setSelectedPlaylist(playlist.id)
+                          setSharelistName(playlist.name)
+                        }}
                         style={{
                           padding: '14px 16px',
                           background: selectedPlaylist === playlist.id ? 'rgba(56, 189, 248, 0.15)' : 'rgba(28, 31, 33, 0.6)',
@@ -276,24 +282,51 @@ export function CreateShareList() {
               />
             )}
 
-            {/* Continue button */}
+            {/* Name + create */}
             {selectedPlaylist && (
-              <Button
-                block
-                size="large"
-                loading={creating}
-                onClick={() => void handleCreate()}
-                icon={!creating && <CheckCircleOutlined />}
-                style={{
-                  background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
-                  border: 'none', borderRadius: '10px', height: '48px',
-                  fontSize: '14px', fontWeight: 700, color: '#FFFFFF',
-                  boxShadow: '0 4px 16px rgba(56, 189, 248, 0.25)',
-                  marginTop: '20px',
-                }}
-              >
-                {creating ? 'Creating…' : `Create ShareList from "${selectedPlaylistData?.name ?? ''}"`}
-              </Button>
+              <>
+                <Divider style={{ margin: '24px 0', borderColor: 'rgba(56, 189, 248, 0.1)' }} />
+                <Text style={{ color: '#F1F5F9', display: 'block', marginBottom: '12px', fontSize: '13px', fontWeight: 600 }}>
+                  Name
+                </Text>
+                <Input
+                  value={sharelistName}
+                  onChange={e => setSharelistName(e.target.value)}
+                  onPressEnter={() => { if (sharelistName.trim()) void handleCreate() }}
+                  placeholder="Name this ShareList"
+                  maxLength={100}
+                  size="large"
+                  aria-label="ShareList name"
+                  style={{
+                    background: 'rgba(17, 19, 20, 0.5)',
+                    border: '1px solid rgba(56, 189, 248, 0.15)',
+                    borderRadius: '12px',
+                    color: '#F1F5F9',
+                  }}
+                />
+                <Text style={{ color: '#64748B', fontSize: '12px', display: 'block', marginTop: '8px', lineHeight: 1.5 }}>
+                  Shown as the title of this ShareList. It does not rename the playlist on {selectedMeta?.label ?? 'your music service'}.
+                </Text>
+                <Button
+                  block
+                  size="large"
+                  loading={creating}
+                  disabled={!sharelistName.trim()}
+                  onClick={() => void handleCreate()}
+                  icon={!creating && <CheckCircleOutlined />}
+                  style={{
+                    background: sharelistName.trim() ? 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)' : 'rgba(56, 189, 248, 0.1)',
+                    border: 'none', borderRadius: '10px', height: '48px',
+                    fontSize: '14px', fontWeight: 700,
+                    color: sharelistName.trim() ? '#FFFFFF' : '#64748B',
+                    boxShadow: sharelistName.trim() ? '0 4px 16px rgba(56, 189, 248, 0.25)' : 'none',
+                    marginTop: '20px',
+                    opacity: sharelistName.trim() ? 1 : 0.6,
+                  }}
+                >
+                  {creating ? 'Creating…' : 'Create ShareList'}
+                </Button>
+              </>
             )}
           </>
         )}
