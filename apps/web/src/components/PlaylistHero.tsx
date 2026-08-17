@@ -81,8 +81,8 @@ function MetaDetailsAccordion({
           alignItems: 'center',
           justifyContent: 'center',
           width: '100%',
-          height: 28,
-          padding: 0,
+          height: 'auto',
+          padding: '10px 16px',
           margin: 0,
           background: 'transparent',
           border: 'none',
@@ -93,7 +93,7 @@ function MetaDetailsAccordion({
         <span style={{
           color: '#F1F5F9',
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: 400,
           lineHeight: 1,
         }}>
           Meta Details
