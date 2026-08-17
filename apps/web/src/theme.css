@@ -59,11 +59,13 @@ body,
   -webkit-text-size-adjust: 100%;
 }
 
-/* Home Screen PWA: iOS still sizes inset:0 to the Safari-with-toolbar
-   viewport. 100lvh is the large viewport (toolbars gone). */
-html.sl-standalone,
-html.sl-standalone body,
-html.sl-standalone #root {
+/* iOS Home Screen PWA only: inset:0 is still the Safari-with-toolbar
+   viewport. 100lvh is the large viewport (toolbars gone). Desktop
+   installed PWAs keep position:fixed; inset:0 so the shell matches
+   the window content area (outerHeight includes the title bar). */
+html.sl-ios.sl-standalone,
+html.sl-ios.sl-standalone body,
+html.sl-ios.sl-standalone #root {
   top: 0;
   left: 0;
   right: 0;
@@ -72,7 +74,7 @@ html.sl-standalone #root {
   height: var(--sl-app-height, 100lvh);
 }
 
-html.sl-standalone .sl-app-shell {
+html.sl-ios.sl-standalone .sl-app-shell {
   top: 0;
   left: 0;
   right: 0;
@@ -81,9 +83,9 @@ html.sl-standalone .sl-app-shell {
 }
 
 @media (display-mode: standalone), (display-mode: fullscreen) {
-  html,
-  body,
-  #root {
+  html.sl-ios,
+  html.sl-ios body,
+  html.sl-ios #root {
     top: 0;
     left: 0;
     right: 0;
@@ -92,7 +94,7 @@ html.sl-standalone .sl-app-shell {
     height: var(--sl-app-height, 100lvh);
   }
 
-  .sl-app-shell {
+  html.sl-ios .sl-app-shell {
     top: 0;
     left: 0;
     right: 0;

@@ -187,10 +187,7 @@ export function PlaylistHero({ name, trackCount, links, isLoading = false }: Pla
         {/* Playlist info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {isLoading ? (
-            <>
-              <Skeleton.Input active size="small" style={{ width: '70%', height: '28px', marginBottom: '8px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-              <Skeleton.Input active size="small" style={{ width: '50%', height: '16px', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px' }} />
-            </>
+            <Skeleton.Input active size="small" style={{ width: '70%', height: '28px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
           ) : (
             <>
               <h1 style={{ color: '#F1F5F9', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: '1.2', margin: '0 0 4px 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
@@ -204,11 +201,7 @@ export function PlaylistHero({ name, trackCount, links, isLoading = false }: Pla
         </div>
       </Flex>
 
-      {isLoading ? (
-        <Skeleton.Input active size="small" style={{ width: '180px', height: '16px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-      ) : (
-        hasContributing && <ContributingAccordion links={links} />
-      )}
+      {!isLoading && hasContributing && <ContributingAccordion links={links} />}
     </Card>
   )
 }

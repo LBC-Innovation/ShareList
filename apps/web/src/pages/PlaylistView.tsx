@@ -270,11 +270,7 @@ export function PlaylistView() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <Flex key={i} align="center" gap={12}>
                 <Skeleton.Avatar active size={48} style={{ borderRadius: '8px', background: 'rgba(56, 189, 248, 0.1)' }} />
-                <div style={{ flex: 1 }}>
-                  <Skeleton.Input active size="small" style={{ width: '60%', marginBottom: '6px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
-                  <Skeleton.Input active size="small" style={{ width: '40%', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px' }} />
-                </div>
-                <Skeleton.Input active size="small" style={{ width: '40px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
+                <Skeleton.Input active size="small" style={{ flex: 1, width: '100%', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '6px' }} />
               </Flex>
             ))}
           </Flex>

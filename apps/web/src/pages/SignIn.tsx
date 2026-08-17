@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { AuthShell } from '../components/AuthShell'
 import { BrandLogo } from '../components/BrandLogo'
 import * as api from '../lib/api'
+import { isReturningUser } from '../lib/returning-user'
 
 const { Title, Text, Link } = Typography
 
@@ -16,6 +17,7 @@ export function SignIn() {
   const [form] = Form.useForm()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [returning] = useState(() => isReturningUser())
   const invite = searchParams.get('invite')
   const next = searchParams.get('next')
   const expired = searchParams.get('reason') === 'expired'
@@ -75,7 +77,7 @@ export function SignIn() {
         {/* Heading */}
         <Flex vertical align="center" style={{ marginBottom: '40px', textAlign: 'center' }}>
           <Title level={2} style={{ color: '#F1F5F9', marginBottom: '8px', fontSize: '32px', fontWeight: 700, letterSpacing: '-0.5px' }}>
-            Welcome Back
+            {returning ? 'Welcome Back!' : 'Great to meet you!'}
           </Title>
           <Text style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.6' }}>
             Share your music across all platforms
