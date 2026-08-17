@@ -70,38 +70,54 @@ function MetaDetailsAccordion({
   const [open, setOpen] = useState(false)
 
   return (
-    <div style={{ width: '100%', borderTop: '1px solid #2A2D30', paddingTop: 4 }}>
+    <div style={{ width: 'calc(100% + 40px)', margin: '12px -20px 0' }}>
       <button
         type="button"
         onClick={() => setOpen(current => !current)}
         aria-expanded={open}
         style={{
+          position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
           width: '100%',
-          background: 'transparent',
+          height: 28,
+          padding: 0,
+          margin: 0,
+          background: 'rgba(255, 255, 255, 0.25)',
           border: 'none',
           cursor: 'pointer',
-          padding: '4px 0',
-          minHeight: 32,
+          lineHeight: 1,
         }}
       >
         <span style={{
           color: '#F1F5F9',
           fontSize: 13,
           fontWeight: 600,
+          lineHeight: 1,
         }}>
           Meta Details
         </span>
-        {open
-          ? <ChevronDown size={18} strokeWidth={2.75} color="#F1F5F9" />
-          : <ChevronLeft size={18} strokeWidth={2.75} color="#F1F5F9" />}
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: 12,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {open
+            ? <ChevronDown size={14} strokeWidth={2.75} color="#F1F5F9" />
+            : <ChevronLeft size={14} strokeWidth={2.75} color="#F1F5F9" />}
+        </span>
       </button>
 
       {open && (
-        <Flex vertical gap={14} style={{ width: '100%', marginTop: 4 }}>
+        <Flex vertical gap={14} style={{ width: '100%', padding: '12px 20px 16px' }}>
           {ownerEmail && (
             <div>
               <div style={metaLabelStyle}>Created by</div>
@@ -203,9 +219,9 @@ export function PlaylistHero({
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(56, 189, 248, 0.1)',
       }}
-      styles={{ body: { padding: '20px' } }}
+      styles={{ body: { padding: isLoading ? '20px' : '20px 20px 0' } }}
     >
-      <Flex gap={16} style={{ marginBottom: isLoading ? 0 : '8px' }}>
+      <Flex gap={16} style={{ marginBottom: 0 }}>
         {/* Mosaic cover */}
         {isLoading ? (
           <Skeleton.Avatar
