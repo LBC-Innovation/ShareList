@@ -47,7 +47,23 @@ router.get('/connected', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id
     const connected = await getConnectedProviders(userId)
-    res.json({ data: connected, error: null })
+    const data = await Promise.all(connected.map(async row => {
+      if (row.providerEmail) return row
+      try {
+        const provider = getProvider(row.provider)
+        if (!provider.syncAccountEmail) return row
+        const providerEmail = await provider.syncAccountEmail(userId)
+        return { ...row, providerEmail }
+      } catch (err) {
+        log('warn', 'syncAccountEmail failed', {
+          userId,
+          provider: row.provider,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        return row
+      }
+    }))
+    res.json({ data, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'getConnectedProviders failed', { userId: req.user?.id, error: message })

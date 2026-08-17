@@ -18,6 +18,15 @@ export interface StoredTokens {
   refreshToken: string | null
   expiresAt: Date | null
   providerUserId: string | null
+  /** undefined leaves the existing DB value unchanged on upsert. */
+  providerEmail?: string | null
+}
+
+export interface ConnectedProvider {
+  provider: string
+  providerUserId: string | null
+  connectedAt: string
+  providerEmail: string | null
 }
 
 // ── State helpers (CSRF protection) ──────────────────────────────────────────
@@ -127,20 +136,31 @@ export async function storeTokens(
   provider: string,
   tokens: StoredTokens,
 ): Promise<void> {
+  const row: {
+    user_id: string
+    provider: string
+    access_token: string
+    refresh_token: string | null
+    token_expires_at: string | null
+    provider_user_id: string | null
+    updated_at: string
+    provider_email?: string | null
+  } = {
+    user_id: userId,
+    provider,
+    access_token: tokens.accessToken,
+    refresh_token: tokens.refreshToken ?? null,
+    token_expires_at: tokens.expiresAt?.toISOString() ?? null,
+    provider_user_id: tokens.providerUserId ?? null,
+    updated_at: new Date().toISOString(),
+  }
+  if (tokens.providerEmail !== undefined) {
+    row.provider_email = tokens.providerEmail
+  }
+
   const { error } = await supabaseAdmin
     .from('connected_services')
-    .upsert(
-      {
-        user_id: userId,
-        provider,
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken ?? null,
-        token_expires_at: tokens.expiresAt?.toISOString() ?? null,
-        provider_user_id: tokens.providerUserId ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,provider' },
-    )
+    .upsert(row, { onConflict: 'user_id,provider' })
 
   if (error) throw new Error(`storeTokens failed for ${provider}: ${error.message}`)
 }
@@ -155,7 +175,7 @@ export async function getTokens(
 ): Promise<StoredTokens | null> {
   const { data, error } = await supabaseAdmin
     .from('connected_services')
-    .select('access_token, refresh_token, token_expires_at, provider_user_id')
+    .select('access_token, refresh_token, token_expires_at, provider_user_id, provider_email')
     .eq('user_id', userId)
     .eq('provider', provider)
     .single()
@@ -172,6 +192,7 @@ export async function getTokens(
       ? new Date((data as { token_expires_at: string }).token_expires_at)
       : null,
     providerUserId: (data as { provider_user_id: string | null }).provider_user_id,
+    providerEmail: (data as { provider_email: string | null }).provider_email,
   }
 }
 
@@ -194,18 +215,24 @@ export async function deleteTokens(userId: string, provider: string): Promise<vo
  */
 export async function getConnectedProviders(
   userId: string,
-): Promise<{ provider: string; providerUserId: string | null; connectedAt: string }[]> {
+): Promise<ConnectedProvider[]> {
   const { data, error } = await supabaseAdmin
     .from('connected_services')
-    .select('provider, provider_user_id, created_at')
+    .select('provider, provider_user_id, created_at, provider_email')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
 
   if (error) throw new Error(`getConnectedProviders failed: ${error.message}`)
 
-  return (data as { provider: string; provider_user_id: string | null; created_at: string }[]).map(row => ({
+  return (data as {
+    provider: string
+    provider_user_id: string | null
+    created_at: string
+    provider_email: string | null
+  }[]).map(row => ({
     provider: row.provider,
     providerUserId: row.provider_user_id,
     connectedAt: row.created_at,
+    providerEmail: row.provider_email,
   }))
 }

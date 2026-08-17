@@ -196,6 +196,7 @@ export interface ConnectedService {
   provider: string
   providerUserId: string | null
   connectedAt: string
+  providerEmail: string | null
 }
 
 export interface StreamingPlaylist {

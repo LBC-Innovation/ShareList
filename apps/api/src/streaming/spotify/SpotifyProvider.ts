@@ -71,6 +71,7 @@ interface SpotifyPlaylistsResponse {
 
 interface SpotifyMeResponse {
   id: string
+  email?: string | null
 }
 
 // Response type for GET /playlists/{id}/items (current, non-deprecated endpoint)
@@ -193,6 +194,11 @@ const ITEM_BATCH_SIZE = 100
 
 const PROVIDER_NAME = 'spotify'
 
+function normalizeEmail(value: string | null | undefined): string | null {
+  const email = value?.trim()
+  return email && email.includes('@') ? email : null
+}
+
 export class SpotifyProvider implements StreamingProvider {
   readonly name = PROVIDER_NAME
   readonly displayName = 'Spotify'
@@ -209,6 +215,7 @@ export class SpotifyProvider implements StreamingProvider {
       redirectUri: callbackUri,
     })
     const scopes = [
+      'user-read-email',
       'playlist-read-private',
       'playlist-read-collaborative',
       'playlist-modify-public',
@@ -243,15 +250,36 @@ export class SpotifyProvider implements StreamingProvider {
 
     // Fetch the Spotify user ID
     const me = await this._fetchMe(tokenRes.access_token)
+    const providerEmail = normalizeEmail(me.email)
 
     await storeTokens(userId, PROVIDER_NAME, {
       accessToken: tokenRes.access_token,
       refreshToken: tokenRes.refresh_token ?? null,
       expiresAt: new Date(Date.now() + tokenRes.expires_in * 1000),
       providerUserId: me.id,
+      providerEmail,
     })
 
     return { providerUserId: me.id }
+  }
+
+  async syncAccountEmail(userId: string): Promise<string | null> {
+    const accessToken = await this.refreshTokenIfNeeded(userId)
+    const stored = await getTokens(userId, PROVIDER_NAME)
+    if (stored?.providerEmail) return stored.providerEmail
+
+    const me = await this._fetchMe(accessToken)
+    const providerEmail = normalizeEmail(me.email)
+    if (!providerEmail || !stored) return providerEmail
+
+    await storeTokens(userId, PROVIDER_NAME, {
+      accessToken,
+      refreshToken: stored.refreshToken,
+      expiresAt: stored.expiresAt,
+      providerUserId: stored.providerUserId ?? me.id,
+      providerEmail,
+    })
+    return providerEmail
   }
 
   // ── Playlists ──────────────────────────────────────────────────────────────
@@ -402,6 +430,7 @@ export class SpotifyProvider implements StreamingProvider {
       refreshToken: tokenRes.refresh_token ?? stored.refreshToken,
       expiresAt: new Date(Date.now() + tokenRes.expires_in * 1000),
       providerUserId: stored.providerUserId,
+      providerEmail: stored.providerEmail,
     })
 
     return tokenRes.access_token
