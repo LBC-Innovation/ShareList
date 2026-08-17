@@ -369,6 +369,18 @@ input {
   overflow: auto;
 }
 
+.sl-add-friend-collapse.ant-collapse {
+  background: transparent;
+}
+
+.sl-add-friend-collapse .ant-collapse-item {
+  border: none;
+}
+
+.sl-add-friend-collapse .ant-collapse-header {
+  cursor: pointer;
+}
+
 .sl-brand-wordmark,
 .sl-brand-mark {
   display: block;
