@@ -369,6 +369,23 @@ input {
   overflow: auto;
 }
 
+/* Taller Select controls and options for mobile tap targets */
+.ant-select-single .ant-select-selector {
+  min-height: 40px;
+  padding-block: 6px;
+}
+
+.ant-select-single.ant-select-lg .ant-select-selector {
+  min-height: 48px;
+  padding-block: 8px;
+}
+
+.ant-select-item {
+  min-height: 44px;
+  padding-block: 12px;
+  box-sizing: border-box;
+}
+
 .sl-add-friend-collapse.ant-collapse {
   background: transparent;
 }

@@ -52,6 +52,11 @@ function App() {
           Progress: { circleTextColor: SL.text },
           Form: { labelColor: SL.text },
           Input: { colorTextPlaceholder: SL.muted },
+          Select: {
+            optionPadding: '12px 12px',
+            optionHeight: 44,
+            singleItemHeightLG: 48,
+          },
           Table: {
             headerBg: 'rgba(28, 31, 33, 0.6)',
             headerColor: '#94A3B8',

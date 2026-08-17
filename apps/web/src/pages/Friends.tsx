@@ -80,7 +80,8 @@ function PlaylistShareSelect({
                 gap={12}
                 onClick={() => void toggle()}
                 style={{
-                  padding: '10px 14px',
+                  padding: '14px 14px',
+                  minHeight: '44px',
                   margin: 0,
                   cursor: busy ? 'wait' : 'pointer',
                   borderRadius: 0,
