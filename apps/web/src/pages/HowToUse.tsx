@@ -29,7 +29,7 @@ const STEPS: Step[] = [
   {
     n: '03',
     title: 'Invite a friend',
-    body: 'On Friends, send an invite with an email and the ShareList you want to share. They get a link, sign up or sign in, and land on My Friends. Shared lists show with a mint accent on My Lists.',
+    body: 'On Friends, send an invite with an email and the ShareList you want to share. They get an email link, and if they already have an account they can also accept or reject it under Pending Requests. After they accept, shared lists show with a mint accent on My Lists.',
   },
   {
     n: '04',
