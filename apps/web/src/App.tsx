@@ -53,9 +53,9 @@ function App() {
           Form: { labelColor: SL.text },
           Input: { colorTextPlaceholder: SL.muted },
           Select: {
-            optionPadding: '12px 12px',
-            optionHeight: 44,
-            singleItemHeightLG: 48,
+            optionPadding: '18px 12px',
+            optionHeight: 56,
+            singleItemHeightLG: 56,
           },
           Table: {
             headerBg: 'rgba(28, 31, 33, 0.6)',
