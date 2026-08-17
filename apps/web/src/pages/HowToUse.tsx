@@ -211,7 +211,7 @@ export function HowToUse() {
   const isCompact = !screens.md
 
   return (
-    <Content style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 16px 28px', width: '100%' }}>
+    <Content>
       <Flex vertical gap={8} style={{ marginBottom: 28 }}>
         <Text style={{
           fontSize: 11,

@@ -23,7 +23,7 @@ export function BottomNavigation() {
 
   return (
     <nav className="sl-bottom-nav">
-      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+      <div className="sl-content-inner">
         <Flex justify="space-around" align="center" style={{ padding: '6px 0 4px' }}>
           {navItems.map((item) => {
             const Icon = item.icon

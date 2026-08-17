@@ -33,7 +33,9 @@ export function MainLayout() {
       <TopNavigation />
 
       <div className="sl-app-shell-content">
-        <Outlet />
+        <div className="sl-page">
+          <Outlet />
+        </div>
       </div>
 
       <BottomNavigation />
