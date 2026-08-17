@@ -130,7 +130,10 @@ function MetaDetailsAccordion({
           </div>
 
           {links.length > 0 && (
-            <div>
+            <div style={{
+              borderTop: '1px dashed rgba(148, 163, 184, 0.45)',
+              paddingTop: 14,
+            }}>
               <div style={{ ...metaLabelStyle, marginBottom: 6 }}>Contributing Playlists</div>
               <Flex vertical style={{ width: '100%' }}>
                 {links.map((link, index) => {
@@ -215,7 +218,7 @@ export function PlaylistHero({
       style={{
         borderRadius: '20px',
         overflow: 'hidden',
-        background: 'rgba(28, 31, 33, 0.25)',
+        background: 'rgba(28, 31, 33, 0.6)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(56, 189, 248, 0.1)',
       }}
