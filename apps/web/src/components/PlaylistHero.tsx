@@ -70,7 +70,7 @@ function MetaDetailsAccordion({
   const [open, setOpen] = useState(false)
 
   return (
-    <div style={{ width: 'calc(100% + 40px)', margin: '12px -20px 0' }}>
+    <div>
       <button
         type="button"
         onClick={() => setOpen(current => !current)}
@@ -84,7 +84,7 @@ function MetaDetailsAccordion({
           height: 28,
           padding: 0,
           margin: 0,
-          background: 'rgba(255, 255, 255, 0.25)',
+          background: 'transparent',
           border: 'none',
           cursor: 'pointer',
           lineHeight: 1,
@@ -117,7 +117,7 @@ function MetaDetailsAccordion({
       </button>
 
       {open && (
-        <Flex vertical gap={14} style={{ width: '100%', padding: '12px 20px 16px' }}>
+        <Flex vertical gap={14} style={{ width: '100%', padding: '8px 20px 16px' }}>
           {ownerEmail && (
             <div>
               <div style={metaLabelStyle}>Created by</div>
@@ -215,13 +215,19 @@ export function PlaylistHero({
       style={{
         borderRadius: '20px',
         overflow: 'hidden',
-        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(74, 222, 128, 0.1) 50%, rgba(28, 31, 33, 0.95) 100%)',
+        background: 'rgba(28, 31, 33, 0.25)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(56, 189, 248, 0.1)',
       }}
-      styles={{ body: { padding: isLoading ? '20px' : '20px 20px 0' } }}
+      styles={{ body: { padding: 0 } }}
     >
-      <Flex gap={16} style={{ marginBottom: 0 }}>
+      <Flex
+        gap={16}
+        style={{
+          padding: 20,
+          background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(74, 222, 128, 0.1) 50%, rgba(28, 31, 33, 0.95) 100%)',
+        }}
+      >
         {/* Mosaic cover */}
         {isLoading ? (
           <Skeleton.Avatar
