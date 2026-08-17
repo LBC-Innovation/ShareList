@@ -111,7 +111,7 @@ export function SignUp() {
               prefix={<MailOutlined style={{ color: '#64748B', fontSize: '16px' }} />}
               placeholder="Email address"
               size="large"
-              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', padding: '12px 16px', color: '#F1F5F9', fontSize: '15px' }}
+              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: '#F1F5F9', fontSize: '15px' }}
             />
           </Form.Item>
 
@@ -124,7 +124,7 @@ export function SignUp() {
               prefix={<LockOutlined style={{ color: '#64748B', fontSize: '16px' }} />}
               placeholder="Password (min. 6 characters)"
               size="large"
-              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', padding: '12px 16px', color: '#F1F5F9', fontSize: '15px' }}
+              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: '#F1F5F9', fontSize: '15px' }}
             />
           </Form.Item>
 
@@ -146,7 +146,7 @@ export function SignUp() {
               prefix={<LockOutlined style={{ color: '#64748B', fontSize: '16px' }} />}
               placeholder="Confirm password"
               size="large"
-              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', padding: '12px 16px', color: '#F1F5F9', fontSize: '15px' }}
+              style={{ background: 'rgba(28, 31, 33, 0.6)', border: '1px solid #2A2D30', borderRadius: '12px', color: '#F1F5F9', fontSize: '15px' }}
             />
           </Form.Item>
 

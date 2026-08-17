@@ -57,7 +57,7 @@ function PlaylistShareSelect({
           onMouseDown={event => event.preventDefault()}
         >
           {lists.length === 0 ? (
-            <div style={{ padding: '12px 14px' }}>
+            <div style={{ padding: '18px 14px' }}>
               <Text style={{ color: SL.muted, fontSize: '13px' }}>Create a ShareList first.</Text>
             </div>
           ) : lists.map(list => {
@@ -80,7 +80,8 @@ function PlaylistShareSelect({
                 gap={12}
                 onClick={() => void toggle()}
                 style={{
-                  padding: '10px 14px',
+                  padding: '18px 14px',
+                  minHeight: '56px',
                   margin: 0,
                   cursor: busy ? 'wait' : 'pointer',
                   borderRadius: 0,

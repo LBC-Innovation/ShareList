@@ -105,7 +105,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
                 <Input
                   prefix={<MailOutlined style={{ color: '#64748B', fontSize: '12px' }} />}
                   placeholder="user@example.com"
-                  style={{ background: 'rgba(17, 19, 20, 0.8)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', color: '#F1F5F9', height: '36px', fontSize: '14px' }}
+                  style={{ background: 'rgba(17, 19, 20, 0.8)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', color: '#F1F5F9', fontSize: '14px' }}
                 />
               </Form.Item>
               <Form.Item
@@ -117,7 +117,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
                 <Input.Password
                   prefix={<LockOutlined style={{ color: '#64748B', fontSize: '12px' }} />}
                   placeholder="Min 6 characters"
-                  style={{ background: 'rgba(17, 19, 20, 0.8)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', color: '#F1F5F9', height: '36px', fontSize: '14px' }}
+                  style={{ background: 'rgba(17, 19, 20, 0.8)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', color: '#F1F5F9', fontSize: '14px' }}
                 />
               </Form.Item>
             </Space>

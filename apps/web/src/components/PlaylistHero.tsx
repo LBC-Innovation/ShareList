@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Card, Flex, Skeleton } from 'antd'
 import { ChevronDown, ChevronLeft } from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -25,114 +25,192 @@ interface PlaylistHeroProps {
   trackCount: number
   links: HeroLink[]
   isLoading?: boolean
+  ownerEmail?: string
+  createdAt?: string
 }
 
 function formatTrackCount(n: number): string {
   return `${n} ${n === 1 ? 'song' : 'songs'}`
 }
 
-function ContributingAccordion({ links }: { links: HeroLink[] }) {
+function formatCreatedAt(iso?: string): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+const metaLabelStyle: CSSProperties = {
+  color: '#64748B',
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  marginBottom: 4,
+}
+
+const metaValueStyle: CSSProperties = {
+  color: '#F1F5F9',
+  fontSize: 13,
+  fontWeight: 500,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+function MetaDetailsAccordion({
+  links,
+  ownerEmail,
+  createdAt,
+}: {
+  links: HeroLink[]
+  ownerEmail?: string
+  createdAt?: string
+}) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div style={{ width: '100%', borderTop: '1px solid #2A2D30', paddingTop: 12 }}>
+    <div>
       <button
         type="button"
         onClick={() => setOpen(current => !current)}
         aria-expanded={open}
         style={{
+          position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
           width: '100%',
+          height: 'auto',
+          padding: '20px 32px',
+          margin: 0,
           background: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          padding: '10px 0',
-          minHeight: 44,
+          lineHeight: 1,
         }}
       >
         <span style={{
-          color: '#F1F5F9',
+          color: '#64748B',
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: 400,
+          lineHeight: 1,
         }}>
-          Contributing Playlists
+          List Details
         </span>
-        {open
-          ? <ChevronDown size={18} strokeWidth={2.75} color="#F1F5F9" />
-          : <ChevronLeft size={18} strokeWidth={2.75} color="#F1F5F9" />}
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: 12,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {open
+            ? <ChevronDown size={14} strokeWidth={2.75} color="#64748B" />
+            : <ChevronLeft size={14} strokeWidth={2.75} color="#64748B" />}
+        </span>
       </button>
 
       {open && (
-        <Flex vertical style={{ width: '100%', marginTop: 8 }}>
-          {links.map((link, index) => {
-            const meta = PROVIDER_META[link.provider]
-            if (!meta) return null
-            return (
-              <Flex
-                key={`${link.provider}-${link.playlistName}`}
-                align="center"
-                gap={10}
-                style={{
-                  width: '100%',
-                  padding: '10px 4px',
-                  borderTop: index === 0 ? 'none' : '1px solid rgba(42, 45, 48, 0.8)',
-                  boxSizing: 'border-box',
-                }}
-              >
-                {link.contributor && (
-                  <UserAvatar
-                    src={link.contributor.avatarUrl}
-                    name={link.contributor.displayName}
-                    size={28}
-                    title={link.contributor.displayName}
-                    style={{
-                      backgroundColor: 'rgba(56,189,248,0.18)',
-                      color: '#38BDF8',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      border: '1px solid rgba(56,189,248,0.25)',
-                    }}
-                  />
-                )}
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  background: meta.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <FontAwesomeIcon icon={meta.icon} style={{ color: 'white', fontSize: '15px' }} />
-                </div>
-                <span style={{
-                  color: '#F1F5F9',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  minWidth: 0,
-                  flex: 1,
-                }}>
-                  {link.playlistName}
-                </span>
+        <Flex vertical gap={14} style={{ width: '100%', padding: '8px 20px 16px' }}>
+          {ownerEmail && (
+            <div>
+              <div style={metaLabelStyle}>Created by</div>
+              <div style={metaValueStyle}>{ownerEmail}</div>
+            </div>
+          )}
+          <div>
+            <div style={metaLabelStyle}>ShareList created</div>
+            <div style={metaValueStyle}>{formatCreatedAt(createdAt)}</div>
+          </div>
+
+          {links.length > 0 && (
+            <div style={{
+              borderTop: '1px dashed rgba(74, 222, 128, 0.55)',
+              paddingTop: 14,
+            }}>
+              <div style={{ ...metaLabelStyle, marginBottom: 6 }}>Contributing Playlists</div>
+              <Flex vertical style={{ width: '100%' }}>
+                {links.map((link, index) => {
+                  const meta = PROVIDER_META[link.provider]
+                  if (!meta) return null
+                  return (
+                    <Flex
+                      key={`${link.provider}-${link.playlistName}`}
+                      align="center"
+                      gap={10}
+                      style={{
+                        width: '100%',
+                        padding: '10px 4px',
+                        borderTop: index === 0 ? 'none' : '1px solid rgba(42, 45, 48, 0.8)',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      {link.contributor && (
+                        <UserAvatar
+                          src={link.contributor.avatarUrl}
+                          name={link.contributor.displayName}
+                          size={28}
+                          title={link.contributor.displayName}
+                          style={{
+                            backgroundColor: 'rgba(56,189,248,0.18)',
+                            color: '#38BDF8',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: '1px solid rgba(56,189,248,0.25)',
+                          }}
+                        />
+                      )}
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: meta.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <FontAwesomeIcon icon={meta.icon} style={{ color: 'white', fontSize: '15px' }} />
+                      </div>
+                      <span style={{
+                        color: '#F1F5F9',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                        flex: 1,
+                      }}>
+                        {link.playlistName}
+                      </span>
+                    </Flex>
+                  )
+                })}
               </Flex>
-            )
-          })}
+            </div>
+          )}
         </Flex>
       )}
     </div>
   )
 }
 
-export function PlaylistHero({ name, trackCount, links, isLoading = false }: PlaylistHeroProps) {
+export function PlaylistHero({
+  name,
+  trackCount,
+  links,
+  isLoading = false,
+  ownerEmail,
+  createdAt,
+}: PlaylistHeroProps) {
   const images = links.map(l => l.imageUrl).filter((u): u is string => !!u).slice(0, 4)
-  const hasContributing = links.length > 0
 
   return (
     <Card
@@ -140,13 +218,19 @@ export function PlaylistHero({ name, trackCount, links, isLoading = false }: Pla
       style={{
         borderRadius: '20px',
         overflow: 'hidden',
-        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(74, 222, 128, 0.1) 50%, rgba(28, 31, 33, 0.95) 100%)',
+        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.09) 0%, rgba(74, 222, 128, 0.06) 50%, rgba(28, 31, 33, 0.6) 100%)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(56, 189, 248, 0.1)',
       }}
-      styles={{ body: { padding: '20px' } }}
+      styles={{ body: { padding: 0 } }}
     >
-      <Flex gap={16} style={{ marginBottom: isLoading || hasContributing ? '16px' : 0 }}>
+      <Flex
+        gap={16}
+        style={{
+          padding: 20,
+          background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(74, 222, 128, 0.1) 50%, rgba(28, 31, 33, 0.95) 100%)',
+        }}
+      >
         {/* Mosaic cover */}
         {isLoading ? (
           <Skeleton.Avatar
@@ -201,7 +285,13 @@ export function PlaylistHero({ name, trackCount, links, isLoading = false }: Pla
         </div>
       </Flex>
 
-      {!isLoading && hasContributing && <ContributingAccordion links={links} />}
+      {!isLoading && (
+        <MetaDetailsAccordion
+          links={links}
+          ownerEmail={ownerEmail}
+          createdAt={createdAt}
+        />
+      )}
     </Card>
   )
 }

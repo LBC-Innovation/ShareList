@@ -228,9 +228,8 @@ export function CreateShareList() {
                 </Text>
 
                 <div style={{
-                  maxHeight: '320px', overflowY: 'auto',
-                  background: 'rgba(17, 19, 20, 0.5)', borderRadius: '12px',
-                  border: '1px solid rgba(56, 189, 248, 0.15)', padding: '8px',
+                  maxHeight: '320px',
+                  overflowY: 'auto',
                 }}>
                   <Space direction="vertical" size={8} style={{ width: '100%' }}>
                     {playlists.map(playlist => (

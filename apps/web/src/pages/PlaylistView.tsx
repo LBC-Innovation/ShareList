@@ -247,6 +247,8 @@ export function PlaylistView() {
           trackCount={displayTracks.length}
           links={heroLinks}
           isLoading={isLoading}
+          ownerEmail={sharelist?.ownerEmail}
+          createdAt={sharelist?.createdAt}
         />
       </div>
 
@@ -296,20 +298,6 @@ export function PlaylistView() {
             onShuffle={() => void handleShuffle()}
           />
         )
-      )}
-
-      {!isLoading && !error && sharelist?.ownerEmail && (
-        <Text style={{
-          display: 'block',
-          textAlign: 'center',
-          color: '#64748B',
-          fontSize: '12px',
-          marginTop: '20px',
-          paddingBottom: '8px',
-          lineHeight: 1.5,
-        }}>
-          List created by {sharelist.ownerEmail}
-        </Text>
       )}
 
       <LaunchStreamingFAB externalUrl={primaryLink?.externalUrl} />
