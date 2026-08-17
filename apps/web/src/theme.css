@@ -402,6 +402,29 @@ input {
   box-sizing: border-box;
 }
 
+/* Match Select field padding on text inputs */
+.ant-input,
+.ant-input-affix-wrapper {
+  min-height: 56px;
+  padding-block: 14px;
+  padding-inline: 16px;
+  box-sizing: border-box;
+}
+
+.ant-input-lg,
+.ant-input-affix-wrapper-lg {
+  min-height: 60px;
+  padding-block: 16px;
+  padding-inline: 18px;
+}
+
+.ant-input-affix-wrapper .ant-input {
+  min-height: 0;
+  height: auto;
+  padding-block: 0;
+  padding-inline: 0;
+}
+
 .sl-add-friend-collapse.ant-collapse {
   background: transparent;
 }
