@@ -24,12 +24,12 @@ const STEPS: Step[] = [
   {
     n: '02',
     title: 'Create a ShareList',
-    body: 'From My Lists, create a ShareList, pick one of your playlists, and give the list a name. That name is the title you see on the ShareList. The linked playlist is the starting copy; songs come from linked playlists, not a separate ShareList library.',
+    body: 'From Lists, create a ShareList, pick one of your playlists, and give the list a name. That name is the title you see on the ShareList. The linked playlist is the starting copy; songs come from linked playlists, not a separate ShareList library.',
   },
   {
     n: '03',
     title: 'Invite a friend',
-    body: 'On Friends, send an invite with an email and the ShareList you want to share. They get a link, sign up or sign in, and land on My Friends. Shared lists show with a mint accent on My Lists.',
+    body: 'On Friends, send an invite with an email and the ShareList you want to share. They get an email link, and if they already have an account they can also accept or reject it under Pending Requests. After they accept, shared lists show under Lists you\'ve been invited to.',
   },
   {
     n: '04',
@@ -83,8 +83,8 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       },
       {
         key: 'my-lists',
-        term: 'My Lists',
-        meaning: 'Home. Lists you created plus lists friends shared with you. Shared lists use a mint highlight.',
+        term: 'List Library',
+        meaning: 'Home, opened from Lists. Lists you created and lists friends shared with you, in two sections. Shared lists use a mint highlight.',
       },
       {
         key: 'linked-playlist',
@@ -164,7 +164,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'leave',
         term: 'Leave',
-        meaning: "A collaborator exits a shared ShareList. Their linked playlists become their own ShareList on My Lists. The owner's list stays.",
+        meaning: "A collaborator exits a shared ShareList. Their linked playlists become their own ShareList on List Library. The owner's list stays.",
       },
       {
         key: 'delete',

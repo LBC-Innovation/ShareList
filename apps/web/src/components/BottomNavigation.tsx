@@ -14,7 +14,7 @@ export function BottomNavigation() {
     location.pathname === '/' || location.pathname.startsWith('/list')
 
   const navItems = [
-    { icon: ListMusic,  label: 'My Lists', path: '/',        active: isMyListsActive },
+    { icon: ListMusic,  label: 'Lists', path: '/',        active: isMyListsActive },
     { icon: PlusCircle, label: 'Create',   path: '/create',  active: location.pathname === '/create' },
     { icon: Users,      label: 'Friends',  path: '/friends', active: location.pathname === '/friends' },
     { icon: Settings,   label: 'Settings', path: '/settings',active: location.pathname.startsWith('/settings') },

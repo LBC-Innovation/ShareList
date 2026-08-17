@@ -341,7 +341,7 @@ export function PlaylistView() {
             notifyApi.success({
               message: result.left ? 'Left ShareList' : 'ShareList deleted',
               description: result.left
-                ? 'Your linked playlists were saved to My Lists.'
+                ? 'Your linked playlists were saved to List Library.'
                 : 'Friends who contributed kept their own copies. Streaming playlists were not changed.',
               placement: 'topRight',
             })

@@ -1,7 +1,7 @@
 /**
  * Friends / ShareList invite routes.
  *
- *   GET    /friends                         — people (active + pending) and owned-list shares
+ *   GET    /friends                         — people, sent pending, incoming requests
  *   POST   /friends/share                   — share a list (collaborator or email invite)
  *   POST   /friends/unshare                 — unshare a list
  *   POST   /friends/remove                  — remove friend / pending invites
@@ -9,7 +9,9 @@
  *   POST   /friends/invites/:id/resend      — resend a pending invite
  *   DELETE /friends/invites/:id             — delete a pending invite
  *   GET    /friends/invites/:token          — public invite preview
- *   POST   /friends/invites/:token/accept   — accept invite (auth required)
+ *   POST   /friends/invites/:token/accept   — accept invite by email token (auth required)
+ *   POST   /friends/requests/:id/accept     — accept an incoming invite from the app
+ *   POST   /friends/requests/:id/reject     — reject an incoming invite from the app
  */
 
 import { randomBytes } from 'crypto'
@@ -34,6 +36,7 @@ interface InviteRow {
   token: string
   status: string
   expires_at: string
+  created_at: string
 }
 
 interface CollaboratorRow {
@@ -98,6 +101,59 @@ async function createAndSendInvite(opts: {
   })
 
   return { sent: true }
+}
+
+async function acceptInviteForUser(
+  row: InviteRow,
+  userId: string,
+  userEmail: string,
+): Promise<{ accepted: true; sharelistId: string } | { error: string; status: number }> {
+  if (row.status !== 'pending' || new Date(row.expires_at).getTime() < Date.now()) {
+    return { error: 'This invite is no longer valid', status: 410 }
+  }
+
+  if (row.invitee_email.toLowerCase() !== userEmail) {
+    return {
+      error: `This invite was sent to ${row.invitee_email}. Sign in with that email to accept.`,
+      status: 403,
+    }
+  }
+
+  if (row.inviter_id === userId) {
+    return { error: 'You cannot accept your own invite', status: 400 }
+  }
+
+  const { error: collabErr } = await supabaseAdmin.from('sharelist_collaborators').upsert(
+    {
+      sharelist_id: row.sharelist_id,
+      user_id: userId,
+      invited_by: row.inviter_id,
+    },
+    { onConflict: 'sharelist_id,user_id' },
+  )
+
+  if (collabErr) throw new Error(collabErr.message)
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('sharelist_invites')
+    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+    .eq('id', row.id)
+
+  if (updateErr) throw new Error(updateErr.message)
+
+  return { accepted: true, sharelistId: row.sharelist_id }
+}
+
+async function loadIncomingPendingInvite(userEmail: string, inviteId: string): Promise<InviteRow | null> {
+  const { data: invite, error } = await supabaseAdmin
+    .from('sharelist_invites')
+    .select('*')
+    .eq('id', inviteId)
+    .eq('invitee_email', userEmail)
+    .single()
+
+  if (error || !invite) return null
+  return invite as InviteRow
 }
 
 
@@ -248,7 +304,44 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       return a.email.localeCompare(b.email)
     })
 
-    res.json({ data: { friends, pending, people }, error: null })
+    const userEmail = req.user!.email.trim().toLowerCase()
+    const { data: incomingRows, error: incomingErr } = await supabaseAdmin
+      .from('sharelist_invites')
+      .select('id, sharelist_id, inviter_id, created_at, expires_at')
+      .eq('invitee_email', userEmail)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+
+    if (incomingErr) throw new Error(incomingErr.message)
+
+    const incomingListIds = [...new Set((incomingRows ?? []).map(r => r.sharelist_id as string))]
+    const incomingListNames = new Map<string, string>()
+    if (incomingListIds.length > 0) {
+      const { data: incomingLists, error: incomingListsErr } = await supabaseAdmin
+        .from('sharelists')
+        .select('id, name')
+        .in('id', incomingListIds)
+      if (incomingListsErr) throw new Error(incomingListsErr.message)
+      for (const list of incomingLists ?? []) {
+        incomingListNames.set(list.id as string, list.name as string)
+      }
+    }
+
+    const incomingInviterIds = [...new Set((incomingRows ?? []).map(r => r.inviter_id as string))]
+    const incomingInviterEmails = new Map<string, string>()
+    await Promise.all(incomingInviterIds.map(async id => {
+      incomingInviterEmails.set(id, await getUserEmail(id))
+    }))
+
+    const incoming = (incomingRows ?? []).map(row => ({
+      id: row.id as string,
+      inviterEmail: incomingInviterEmails.get(row.inviter_id as string) || 'Unknown user',
+      requestedAt: row.created_at as string,
+      sharelistName: incomingListNames.get(row.sharelist_id as string) ?? 'ShareList',
+    }))
+
+    res.json({ data: { friends, pending, people, incoming }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'GET /friends failed', { userId, error: message })
@@ -655,48 +748,77 @@ router.post('/invites/:token/accept', requireAuth, async (req: Request, res: Res
       return
     }
 
-    const row = invite as InviteRow
-    if (row.status !== 'pending' || new Date(row.expires_at).getTime() < Date.now()) {
-      res.status(410).json({ data: null, error: { message: 'This invite is no longer valid' } })
+    const result = await acceptInviteForUser(invite as InviteRow, userId, userEmail)
+    if ('error' in result) {
+      res.status(result.status).json({ data: null, error: { message: result.error } })
       return
     }
 
-    if (row.invitee_email !== userEmail) {
-      res.status(403).json({
-        data: null,
-        error: { message: `This invite was sent to ${row.invitee_email}. Sign in with that email to accept.` },
-      })
-      return
-    }
-
-    if (row.inviter_id === userId) {
-      res.status(400).json({ data: null, error: { message: 'You cannot accept your own invite' } })
-      return
-    }
-
-    const { error: collabErr } = await supabaseAdmin.from('sharelist_collaborators').upsert(
-      {
-        sharelist_id: row.sharelist_id,
-        user_id: userId,
-        invited_by: row.inviter_id,
-      },
-      { onConflict: 'sharelist_id,user_id' },
-    )
-
-    if (collabErr) throw new Error(collabErr.message)
-
-    const { error: updateErr } = await supabaseAdmin
-      .from('sharelist_invites')
-      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-      .eq('id', row.id)
-
-    if (updateErr) throw new Error(updateErr.message)
-
-    log('info', 'ShareList invite accepted', { sharelistId: row.sharelist_id, userId })
-    res.json({ data: { accepted: true, sharelistId: row.sharelist_id }, error: null })
+    log('info', 'ShareList invite accepted', { sharelistId: result.sharelistId, userId })
+    res.json({ data: { accepted: true, sharelistId: result.sharelistId }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     log('error', 'POST /friends/invites/:token/accept failed', { userId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
+// ── POST /friends/requests/:inviteId/accept ───────────────────────────────────
+
+router.post('/requests/:inviteId/accept', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const userEmail = req.user!.email.trim().toLowerCase()
+  const { inviteId } = req.params as { inviteId: string }
+
+  try {
+    const invite = await loadIncomingPendingInvite(userEmail, inviteId)
+    if (!invite) {
+      res.status(404).json({ data: null, error: { message: 'Pending request not found' } })
+      return
+    }
+
+    const result = await acceptInviteForUser(invite, userId, userEmail)
+    if ('error' in result) {
+      res.status(result.status).json({ data: null, error: { message: result.error } })
+      return
+    }
+
+    log('info', 'ShareList request accepted', { sharelistId: result.sharelistId, userId, inviteId })
+    res.json({ data: { accepted: true, sharelistId: result.sharelistId }, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'POST /friends/requests/:inviteId/accept failed', { userId, inviteId, error: message })
+    res.status(500).json({ data: null, error: { message } })
+  }
+})
+
+// ── POST /friends/requests/:inviteId/reject ───────────────────────────────────
+
+router.post('/requests/:inviteId/reject', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const userEmail = req.user!.email.trim().toLowerCase()
+  const { inviteId } = req.params as { inviteId: string }
+
+  try {
+    const invite = await loadIncomingPendingInvite(userEmail, inviteId)
+    if (!invite || invite.status !== 'pending' || new Date(invite.expires_at).getTime() < Date.now()) {
+      res.status(404).json({ data: null, error: { message: 'Pending request not found' } })
+      return
+    }
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('sharelist_invites')
+      .update({ status: 'rejected' })
+      .eq('id', invite.id)
+      .eq('invitee_email', userEmail)
+
+    if (updateErr) throw new Error(updateErr.message)
+
+    log('info', 'ShareList request rejected', { sharelistId: invite.sharelist_id, userId, inviteId })
+    res.json({ data: { rejected: true }, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    log('error', 'POST /friends/requests/:inviteId/reject failed', { userId, inviteId, error: message })
     res.status(500).json({ data: null, error: { message } })
   }
 })

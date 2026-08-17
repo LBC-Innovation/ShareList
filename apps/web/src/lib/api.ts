@@ -425,10 +425,18 @@ export interface PendingInvite {
   sharelistName: string
 }
 
+export interface IncomingShareRequest {
+  id: string
+  inviterEmail: string
+  requestedAt: string
+  sharelistName: string
+}
+
 export interface FriendsOverview {
   friends: Friend[]
   pending: PendingInvite[]
   people: FriendPerson[]
+  incoming: IncomingShareRequest[]
 }
 
 export interface FriendPerson {
@@ -474,6 +482,22 @@ export function acceptFriendInvite(
   token: string,
 ): Promise<ApiResult<{ accepted: boolean; sharelistId: string }>> {
   return request<{ accepted: boolean; sharelistId: string }>(`/friends/invites/${token}/accept`, {
+    method: 'POST',
+  })
+}
+
+export function acceptShareRequest(
+  inviteId: string,
+): Promise<ApiResult<{ accepted: boolean; sharelistId: string }>> {
+  return request<{ accepted: boolean; sharelistId: string }>(`/friends/requests/${inviteId}/accept`, {
+    method: 'POST',
+  })
+}
+
+export function rejectShareRequest(
+  inviteId: string,
+): Promise<ApiResult<{ rejected: boolean }>> {
+  return request<{ rejected: boolean }>(`/friends/requests/${inviteId}/reject`, {
     method: 'POST',
   })
 }

@@ -4,10 +4,10 @@ import {
   Layout, Card, Flex, Typography, Tabs, Form, Input, Select, Button, Empty,
   Skeleton, notification, Tag, Switch, Popconfirm, Grid,
 } from 'antd'
-import { MailOutlined, UserAddOutlined, DeleteOutlined } from '@ant-design/icons'
+import { MailOutlined, UserAddOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import { Users } from 'lucide-react'
 import * as api from '../lib/api'
-import type { FriendPerson, ShareListSummary } from '../lib/api'
+import type { FriendPerson, IncomingShareRequest, ShareListSummary } from '../lib/api'
 
 const { Content } = Layout
 const { Text, Title } = Typography
@@ -19,6 +19,12 @@ const SL = {
 
 function personKey(person: FriendPerson): string {
   return person.userId ?? person.email.toLowerCase()
+}
+
+function formatRequestedAt(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function PlaylistShareSelect({
@@ -118,27 +124,31 @@ export function Friends() {
   const [notifyApi, contextHolder] = notification.useNotification()
   const screens = Grid.useBreakpoint()
   const isCompact = !screens.md
-  const activeTab = searchParams.get('tab') === 'my-friends' ? 'my-friends' : 'add'
+  const tabParam = searchParams.get('tab')
+  const activeTab = tabParam === 'my-friends' || tabParam === 'pending' ? tabParam : 'add'
 
   const [lists, setLists] = useState<ShareListSummary[]>([])
   const [people, setPeople] = useState<FriendPerson[]>([])
+  const [incoming, setIncoming] = useState<IncomingShareRequest[]>([])
   const [listsLoading, setListsLoading] = useState(true)
   const [friendsLoading, setFriendsLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [removingKey, setRemovingKey] = useState<string | null>(null)
+  const [actingId, setActingId] = useState<string | null>(null)
   const [form] = Form.useForm()
 
   const ownedLists = useMemo(() => lists.filter(list => !list.isShared), [lists])
 
-  const loadFriends = async () => {
-    setFriendsLoading(true)
+  const loadFriends = async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setFriendsLoading(true)
     const result = await api.listFriends()
-    setFriendsLoading(false)
+    if (!opts?.silent) setFriendsLoading(false)
     if (api.isError(result)) {
       notifyApi.error({ message: 'Failed to load friends', description: result.error.message, placement: 'topRight' })
       return
     }
     setPeople(result.data.people ?? [])
+    setIncoming(result.data.incoming ?? [])
   }
 
   useEffect(() => {
@@ -161,7 +171,7 @@ export function Friends() {
       notifyApi.success({ message: 'Invite sent', description: `We emailed ${values.email}.`, placement: 'topRight' })
       form.resetFields()
       setSearchParams({ tab: 'my-friends' })
-      void loadFriends()
+      void loadFriends({ silent: true })
     } finally {
       setSending(false)
     }
@@ -206,6 +216,41 @@ export function Friends() {
       notifyApi.success({ message: 'Friend removed', placement: 'topRight' })
     } finally {
       setRemovingKey(null)
+    }
+  }
+
+  const handleAcceptRequest = async (request: IncomingShareRequest) => {
+    setActingId(request.id)
+    try {
+      const result = await api.acceptShareRequest(request.id)
+      if (api.isError(result)) {
+        notifyApi.error({ message: 'Could not accept request', description: result.error.message, placement: 'topRight' })
+        return
+      }
+      setIncoming(prev => prev.filter(row => row.id !== request.id))
+      notifyApi.success({
+        message: 'Request accepted',
+        description: `You now share “${request.sharelistName}” with ${request.inviterEmail}.`,
+        placement: 'topRight',
+      })
+      void loadFriends({ silent: true })
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  const handleRejectRequest = async (request: IncomingShareRequest) => {
+    setActingId(request.id)
+    try {
+      const result = await api.rejectShareRequest(request.id)
+      if (api.isError(result)) {
+        notifyApi.error({ message: 'Could not reject request', description: result.error.message, placement: 'topRight' })
+        return
+      }
+      setIncoming(prev => prev.filter(row => row.id !== request.id))
+      notifyApi.success({ message: 'Request declined', placement: 'topRight' })
+    } finally {
+      setActingId(null)
     }
   }
 
@@ -498,6 +543,177 @@ export function Friends() {
     </div>
   )
 
+  const requestActions = (request: IncomingShareRequest) => {
+    const busy = actingId === request.id
+    return (
+      <Flex gap={8} justify="flex-end">
+        <Button
+          type="text"
+          shape="circle"
+          aria-label={`Accept request from ${request.inviterEmail}`}
+          icon={<CheckOutlined />}
+          loading={busy}
+          onClick={() => void handleAcceptRequest(request)}
+          style={{
+            color: SL.mint,
+            background: 'rgba(74, 222, 128, 0.12)',
+            border: '1px solid rgba(74, 222, 128, 0.3)',
+            width: '36px',
+            height: '36px',
+          }}
+        />
+        <Button
+          type="text"
+          shape="circle"
+          aria-label={`Reject request from ${request.inviterEmail}`}
+          icon={<CloseOutlined />}
+          loading={busy}
+          onClick={() => void handleRejectRequest(request)}
+          style={{
+            color: '#EF4444',
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            width: '36px',
+            height: '36px',
+          }}
+        />
+      </Flex>
+    )
+  }
+
+  const pendingRequestsTab = (
+    <div style={{ paddingTop: '8px' }}>
+      <Card
+        style={{
+          background: 'rgba(28, 31, 33, 0.4)',
+          border: '1px solid rgba(56, 189, 248, 0.1)',
+          borderRadius: '16px',
+          backdropFilter: 'blur(20px)',
+          overflow: 'hidden',
+        }}
+        styles={{ body: { padding: 0 } }}
+      >
+        {!isCompact && (
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(56, 189, 248, 0.1)', background: 'rgba(17, 19, 20, 0.4)' }}>
+            <Flex>
+              <div style={{ flex: '1 1 34%', paddingRight: '16px' }}>
+                <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>From</Text>
+              </div>
+              <div style={{ width: '140px', paddingRight: '16px', flexShrink: 0 }}>
+                <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Requested</Text>
+              </div>
+              <div style={{ flex: '1 1 34%', paddingRight: '16px', minWidth: 0 }}>
+                <Text style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ShareList</Text>
+              </div>
+              <div style={{ width: '96px', flexShrink: 0 }} />
+            </Flex>
+          </div>
+        )}
+
+        {friendsLoading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <div key={`pending-skeleton-${index}`} style={{ padding: '14px 20px', borderBottom: index < 3 ? '1px solid rgba(56, 189, 248, 0.05)' : 'none' }}>
+              <Skeleton.Input active style={{ width: '100%', height: '36px', borderRadius: '8px' }} />
+            </div>
+          ))
+        ) : incoming.length === 0 ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+            <Empty
+              image={<Users style={{ width: '48px', height: '48px', color: SL.muted, opacity: 0.5 }} />}
+              description={
+                <Text style={{ color: SL.muted, fontSize: '13px' }}>
+                  No pending requests. When someone shares a list with you, it will show up here.
+                </Text>
+              }
+            />
+          </div>
+        ) : (
+          incoming.map((request, index) => {
+            const initials = request.inviterEmail.charAt(0).toUpperCase()
+            return (
+              <div
+                key={request.id}
+                style={{
+                  padding: isCompact ? '16px' : '16px 20px',
+                  borderBottom: index < incoming.length - 1 ? '1px solid rgba(56, 189, 248, 0.05)' : 'none',
+                }}
+              >
+                {isCompact ? (
+                  <Flex vertical gap={12}>
+                    <Flex align="center" justify="space-between" gap={12}>
+                      <Flex align="center" gap={12} style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
+                        }}>
+                          {initials}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <Text style={{
+                            color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            display: 'block',
+                          }}>
+                            {request.inviterEmail || 'Unknown user'}
+                          </Text>
+                          <Text style={{ color: '#64748B', fontSize: '12px' }}>
+                            {formatRequestedAt(request.requestedAt)}
+                          </Text>
+                        </div>
+                      </Flex>
+                      {requestActions(request)}
+                    </Flex>
+                    <Text style={{ color: '#F1F5F9', fontSize: '13px', fontWeight: 500 }}>
+                      {request.sharelistName}
+                    </Text>
+                  </Flex>
+                ) : (
+                  <Flex align="center">
+                    <Flex align="center" gap={12} style={{ flex: '1 1 34%', paddingRight: '16px', minWidth: 0 }}>
+                      <div style={{
+                        width: '40px', height: '40px', borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #38BDF8 0%, #4ADE80 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '16px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0,
+                      }}>
+                        {initials}
+                      </div>
+                      <Text style={{
+                        color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {request.inviterEmail || 'Unknown user'}
+                      </Text>
+                    </Flex>
+                    <div style={{ width: '140px', paddingRight: '16px', flexShrink: 0 }}>
+                      <Text style={{ color: '#94A3B8', fontSize: '13px' }}>
+                        {formatRequestedAt(request.requestedAt)}
+                      </Text>
+                    </div>
+                    <div style={{ flex: '1 1 34%', paddingRight: '16px', minWidth: 0 }}>
+                      <Text style={{
+                        color: '#F1F5F9', fontSize: '14px', fontWeight: 500,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        display: 'block',
+                      }}>
+                        {request.sharelistName}
+                      </Text>
+                    </div>
+                    <div style={{ width: '96px', flexShrink: 0 }}>
+                      {requestActions(request)}
+                    </div>
+                  </Flex>
+                )}
+              </div>
+            )
+          })
+        )}
+      </Card>
+    </div>
+  )
+
   return (
     <Content style={{ maxWidth: '1100px', margin: '0 auto', padding: isCompact ? '20px 16px 28px' : '24px 20px 28px', width: '100%' }}>
       {contextHolder}
@@ -506,10 +722,11 @@ export function Friends() {
       </Title>
       <Tabs
         activeKey={activeTab}
-        onChange={key => setSearchParams(key === 'my-friends' ? { tab: 'my-friends' } : {})}
+        onChange={key => setSearchParams(key === 'add' ? {} : { tab: key })}
         items={[
           { key: 'add', label: 'Add Friend', children: addFriendTab },
           { key: 'my-friends', label: 'My Friends', children: myFriendsTab },
+          { key: 'pending', label: 'Pending Requests', children: pendingRequestsTab },
         ]}
       />
     </Content>
