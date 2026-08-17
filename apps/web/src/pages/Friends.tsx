@@ -5,7 +5,7 @@ import {
   Skeleton, notification, Tag, Switch, Popconfirm, Grid, Collapse,
 } from 'antd'
 import { MailOutlined, UserAddOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons'
-import { Users } from 'lucide-react'
+import { ChevronDown, ChevronLeft, Users } from 'lucide-react'
 import * as api from '../lib/api'
 import type { FriendPerson, IncomingShareRequest, ShareListSummary } from '../lib/api'
 
@@ -266,6 +266,11 @@ export function Friends() {
       }}
       bordered={false}
       expandIconPlacement="end"
+      expandIcon={({ isActive }) =>
+        isActive
+          ? <ChevronDown size={18} strokeWidth={2.75} color="#F1F5F9" />
+          : <ChevronLeft size={18} strokeWidth={2.75} color="#F1F5F9" />
+      }
       style={{
         background: 'rgba(28, 31, 33, 0.4)',
         border: '1px solid rgba(56, 189, 248, 0.15)',
