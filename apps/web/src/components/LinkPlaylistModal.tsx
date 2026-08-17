@@ -339,10 +339,6 @@ export function LinkPlaylistModal({ sharelistId, name, links, isOwner, onClose, 
             maxHeight: '280px',
             overflowY: 'auto',
             overflowX: 'hidden',
-            background: 'rgba(17, 19, 20, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid rgba(56, 189, 248, 0.15)',
-            padding: '8px',
           }}>
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
               {links.map(link => {
