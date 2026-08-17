@@ -14,9 +14,9 @@ import { LinkOutlined, DisconnectOutlined, CheckOutlined, ExclamationCircleOutli
 import * as api from '../lib/api'
 import type { ConnectedService, StreamingProvider } from '../lib/api'
 import { LinkServiceModal } from '../components/LinkServiceModal'
+import { InstallInstructionsModal } from '../components/InstallInstructionsModal'
 import { BrandLogo } from '../components/BrandLogo'
 import { usePwaInstall } from '../hooks/usePwaInstall'
-import { Share } from 'lucide-react'
 
 const { Content } = Layout
 const { Title, Text } = Typography
@@ -44,8 +44,8 @@ export function Settings() {
   const screens = Grid.useBreakpoint()
   const isCompact = !screens.md
 
-  const { installed, ios, hasNativePrompt, install } = usePwaInstall()
-  const [showIosHelp, setShowIosHelp] = useState(false)
+  const { installed, ios, copy, hasNativePrompt, install } = usePwaInstall()
+  const [showInstallHelp, setShowInstallHelp] = useState(false)
 
   const [providers, setProviders] = useState<StreamingProvider[]>([])
   const [connected, setConnected] = useState<ConnectedService[]>([])
@@ -372,14 +372,10 @@ export function Settings() {
             <BrandLogo variant="icon" height={44} />
             <div style={{ minWidth: 0 }}>
               <Text style={{ color: SL.text, fontSize: 15, fontWeight: 600, display: 'block', marginBottom: 3 }}>
-                {installed ? 'Installed on this device' : 'Install ShareList'}
+                {installed ? copy.installedTitle : copy.title}
               </Text>
               <Text style={{ color: SL.muted, fontSize: 13, lineHeight: 1.45 }}>
-                {installed
-                  ? 'ShareList is running as an installed app on this device.'
-                  : ios
-                    ? 'Add ShareList to your Home Screen for a full-screen, phone-first app.'
-                    : 'Install ShareList as an app for a full-screen experience on this device.'}
+                {installed ? copy.installedDescription : copy.description}
               </Text>
             </div>
           </Flex>
@@ -403,7 +399,7 @@ export function Settings() {
           {!installed && ios && !hasNativePrompt && (
             <Button
               block={isCompact}
-              onClick={() => setShowIosHelp(open => !open)}
+              onClick={() => setShowInstallHelp(true)}
               style={{
                 background: `${SL.accent}18`,
                 border: `1px solid ${SL.accent}44`,
@@ -414,22 +410,27 @@ export function Settings() {
                 flexShrink: 0,
               }}
             >
-              {showIosHelp ? 'Hide steps' : 'How to add'}
+              How to add
             </Button>
           )}
           {!installed && !hasNativePrompt && !ios && (
-            <Text style={{ color: SL.muted, fontSize: 13 }}>
-              Open ShareList in Chrome or Edge, or on your phone, to install it.
-            </Text>
+            <Button
+              block={isCompact}
+              onClick={() => setShowInstallHelp(true)}
+              style={{
+                background: `${SL.accent}18`,
+                border: `1px solid ${SL.accent}44`,
+                color: SL.accent,
+                borderRadius: 10,
+                height: 40,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              Install Instructions
+            </Button>
           )}
         </Flex>
-        {ios && showIosHelp && !installed && (
-          <ol style={{ margin: '14px 0 0', paddingLeft: 18, color: '#94A3B8', fontSize: 13, lineHeight: 1.6 }}>
-            <li>Tap <Share style={{ width: 14, height: 14, verticalAlign: '-2px' }} /> Share in Safari</li>
-            <li>Tap <strong style={{ color: SL.text }}>Add to Home Screen</strong></li>
-            <li>Tap <strong style={{ color: SL.text }}>Add</strong></li>
-          </ol>
-        )}
       </Card>
 
       {/* Link Service modal */}
@@ -444,6 +445,11 @@ export function Settings() {
           }}
         />
       )}
+
+      <InstallInstructionsModal
+        open={showInstallHelp}
+        onClose={() => setShowInstallHelp(false)}
+      />
     </Content>
   )
 }

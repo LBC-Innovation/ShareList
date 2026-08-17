@@ -30,6 +30,19 @@ export function isIosDevice(): boolean {
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
+export type ClientOs = 'ios' | 'android' | 'macos' | 'windows' | 'linux' | 'other'
+
+export function getClientOs(): ClientOs {
+  if (typeof navigator === 'undefined') return 'other'
+  if (isIosDevice()) return 'ios'
+  const ua = navigator.userAgent
+  if (/android/i.test(ua)) return 'android'
+  if (/Win/i.test(ua)) return 'windows'
+  if (/Mac/i.test(ua)) return 'macos'
+  if (/CrOS/i.test(ua) || /Linux/i.test(ua)) return 'linux'
+  return 'other'
+}
+
 export function isIosStandalone(): boolean {
   return isIosDevice() && isStandaloneDisplay()
 }
@@ -55,6 +68,7 @@ export function applyStandaloneClass(): void {
   const standalone = isStandaloneDisplay()
   installed = standalone
   document.documentElement.classList.toggle('sl-standalone', standalone)
+  document.documentElement.classList.toggle('sl-ios', isIosDevice())
 }
 
 function largeViewportHeight(): number {
@@ -84,7 +98,11 @@ function readSafeInset(side: 'top' | 'bottom'): number {
  * Safari's layout viewport is the visible page (above the toolbar).
  * iOS Home Screen PWAs still *report* that same small viewport even though
  * the toolbar is gone, which leaves a toolbar-sized hole under the footer.
- * In standalone, size the frame to 100lvh (large viewport, no browser chrome).
+ * On iOS standalone only, size the frame to 100lvh / outerHeight.
+ *
+ * Desktop installed PWAs must not use outerHeight: that value includes the
+ * window title bar, so the shell is taller than the visible frame and the
+ * bottom nav is clipped. Desktop keeps position:fixed; inset:0.
  */
 export function lockAppFrame(): void {
   const root = document.documentElement
@@ -99,7 +117,7 @@ export function lockAppFrame(): void {
     root.style.setProperty('--sl-safe-top', `${sat || (ios && standalone ? 47 : 0)}px`)
     root.style.setProperty('--sl-safe-bottom', `${sab || (ios && standalone ? 34 : 0)}px`)
 
-    if (standalone) {
+    if (ios && standalone) {
       const height = Math.max(
         largeViewportHeight(),
         window.outerHeight || 0,

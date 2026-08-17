@@ -18,7 +18,7 @@ const AUTH_PREFIXES = [
 
 export function InstallBanner() {
   const location = useLocation()
-  const { canPrompt, ios, hasNativePrompt, install, dismiss } = usePwaInstall()
+  const { canPrompt, ios, copy, hasNativePrompt, install, dismiss } = usePwaInstall()
   const [showIosHelp, setShowIosHelp] = useState(false)
 
   const onAuth = AUTH_PREFIXES.some(path => location.pathname.startsWith(path))
@@ -45,12 +45,10 @@ export function InstallBanner() {
         <BrandLogo variant="icon" height={36} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: '#F1F5F9', fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 2 }}>
-            {ios ? 'Add ShareList to your Home Screen' : 'Install ShareList'}
+            {copy.title}
           </Text>
           <Text style={{ color: '#94A3B8', fontSize: 12, lineHeight: 1.45, display: 'block' }}>
-            {ios
-              ? 'Use it like an app — full screen, from your Home Screen.'
-              : 'Install the app for a full-screen, phone-ready experience.'}
+            {copy.description}
           </Text>
           {ios && showIosHelp && (
             <ol className="sl-install-steps">
