@@ -82,7 +82,7 @@ function MetaDetailsAccordion({
           justifyContent: 'center',
           width: '100%',
           height: 'auto',
-          padding: '10px 16px',
+          padding: '20px 32px',
           margin: 0,
           background: 'transparent',
           border: 'none',
