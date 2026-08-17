@@ -415,13 +415,14 @@ export function CreateShareList() {
                     }}
                   />
                   <Button
-                    size="large"
-                    icon={<PlusOutlined />}
+                    icon={<PlusOutlined style={{ fontSize: 18 }} />}
                     onClick={handleAddInviteEmail}
                     disabled={creating}
                     aria-label="Add email"
                     style={{
-                      width: '52px',
+                      width: '60px',
+                      height: 'auto',
+                      alignSelf: 'stretch',
                       flexShrink: 0,
                       borderRadius: '12px',
                       border: '1px solid rgba(56, 189, 248, 0.3)',
