@@ -436,7 +436,7 @@ export function LinkPlaylistModal({ sharelistId, name, links, isOwner, onClose, 
       <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '20px', lineHeight: 1.6 }}>
         {isOwner
           ? 'This removes your ShareList and your linked playlists from ShareList. Friends who contributed keep their own copy of the playlists they linked. Spotify and Apple Music playlists are not changed, and no songs are removed.'
-          : 'You will leave this shared list. Your linked playlists become your own ShareList on My Lists. The owner\'s list stays. Spotify and Apple Music playlists are not changed, and no songs are removed.'}
+          : 'You will leave this shared list. Your linked playlists become your own ShareList on List Library. The owner\'s list stays. Spotify and Apple Music playlists are not changed, and no songs are removed.'}
       </Text>
       {confirmDelete ? (
         <Button
