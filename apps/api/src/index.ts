@@ -12,6 +12,7 @@ import adminRouter from './routes/admin'
 import streamingRouter from './routes/streaming'
 import sharelistsRouter from './routes/sharelists'
 import friendsRouter from './routes/friends'
+import { mountSwagger } from './swagger'
 
 const app = express()
 const PORT = process.env['PORT'] ?? 3001
@@ -38,6 +39,8 @@ app.use(cors({
   credentials: true,
 }))
 app.use(express.json())
+
+mountSwagger(app)
 
 app.get('/health', (_req: Request, res: Response) => {
   const result: ApiResult<{ status: string }> = { data: { status: 'ok' }, error: null }
