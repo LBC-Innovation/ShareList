@@ -1,6 +1,6 @@
 // ─── Platforms ────────────────────────────────────────────────────────────────
 
-export type Platform = 'spotify' | 'apple_music' | 'youtube_music'
+export type Platform = 'spotify' | 'apple_music' | 'youtube_music' | 'soundcloud'
 
 // ─── Core domain types ────────────────────────────────────────────────────────
 

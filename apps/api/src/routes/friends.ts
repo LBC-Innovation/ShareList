@@ -21,6 +21,8 @@ import { supabaseAdmin, supabaseAuth } from '../lib/supabase'
 import { getAccessibleSharelist } from '../lib/sharelistAccess'
 import { sendShareInviteEmail } from '../lib/email'
 import { clientOrigin } from '../lib/origins'
+import { connectedPlatformsForUsers } from '../lib/connectedPlatforms'
+import type { Platform } from '@sharelist/shared'
 
 const router = Router()
 
@@ -267,6 +269,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       email: string
       status: 'pending' | 'active'
       sharedListIds: string[]
+      connectedPlatforms: Platform[]
     }>()
 
     for (const friend of friends) {
@@ -279,6 +282,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         email: friend.email,
         status: 'active',
         sharedListIds,
+        connectedPlatforms: [],
       })
     }
 
@@ -296,6 +300,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         email: invite.email,
         status: 'pending',
         sharedListIds: [invite.sharelistId],
+        connectedPlatforms: [],
       })
     }
 
@@ -303,6 +308,13 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       if (a.status !== b.status) return a.status === 'pending' ? -1 : 1
       return a.email.localeCompare(b.email)
     })
+
+    const platformUserIds = people.map(p => p.userId).filter((id): id is string => Boolean(id))
+    const platformsByUser = await connectedPlatformsForUsers(platformUserIds)
+    for (const person of people) {
+      if (!person.userId) continue
+      person.connectedPlatforms = platformsByUser.get(person.userId) ?? []
+    }
 
     const userEmail = req.user!.email.trim().toLowerCase()
     const { data: incomingRows, error: incomingErr } = await supabaseAdmin

@@ -18,7 +18,8 @@ import {
   deleteTokens,
 } from '../oauthHelpers'
 import { invalidateSpotifyGetCache, spotifyFetch } from './spotifyHttp'
-import type { StreamingPlaylist, StreamingProvider, StreamingTrack } from '../types'
+import type { StreamingPlaylist, StreamingProvider, StreamingTrack, TrackSearchQuery, TrackSearchResult } from '../types'
+import { pickBestTrackMatch } from '../../services/trackMatchScore'
 
 // ── Env helpers ───────────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ interface SpotifyTrackObject {
   album: { name: string; images: { url: string }[] }
   duration_ms: number
   external_urls: { spotify: string }
+  external_ids?: { isrc?: string }
 }
 
 // Minimal — we only need `type` to filter episodes out
@@ -134,17 +136,27 @@ function tracksFromPaging(data: SpotifyPlaylistItemsResponse): StreamingTrack[] 
     if (audioObj.type !== 'track') continue
     const t = audioObj as SpotifyTrackObject
     if (!t.id) continue
-    tracks.push({
-      id: t.id,
-      title: t.name,
-      artist: t.artists?.map(a => a.name).join(', ') ?? 'Unknown Artist',
-      album: t.album?.name,
-      durationMs: t.duration_ms,
-      imageUrl: t.album?.images?.[0]?.url,
-      externalUrl: t.external_urls?.spotify,
-    })
+    tracks.push(mapSpotifyTrack(t))
   }
   return tracks
+}
+
+function mapSpotifyTrack(t: SpotifyTrackObject): StreamingTrack {
+  return {
+    id: t.id,
+    title: t.name,
+    artist: t.artists?.map(a => a.name).join(', ') ?? 'Unknown Artist',
+    album: t.album?.name,
+    durationMs: t.duration_ms,
+    imageUrl: t.album?.images?.[0]?.url,
+    externalUrl: t.external_urls?.spotify,
+    isrc: t.external_ids?.isrc,
+  }
+}
+
+function searchTracksFromResponse(raw: unknown): StreamingTrack[] {
+  const tracks = (raw as { tracks?: { items?: SpotifyTrackObject[] } }).tracks?.items ?? []
+  return tracks.filter(t => t?.type === 'track' && t.id).map(mapSpotifyTrack)
 }
 
 function unreadablePlaylistError(playlistId: string): Error {
@@ -492,6 +504,39 @@ export class SpotifyProvider implements StreamingProvider {
     invalidatePlaylistData(playlistId)
     playlistsCache.delete(userId)
     return { written }
+  }
+
+  async searchTrack(userId: string, query: TrackSearchQuery): Promise<TrackSearchResult> {
+    const accessToken = await this.refreshTokenIfNeeded(userId)
+    const headers = { Authorization: `Bearer ${accessToken}` }
+
+    if (query.isrc) {
+      const isrcParams = new URLSearchParams({
+        q: `isrc:${query.isrc.trim()}`,
+        type: 'track',
+        limit: '5',
+      })
+      const isrcRes = await spotifyFetch(`https://api.spotify.com/v1/search?${isrcParams.toString()}`, { headers })
+      if (isrcRes.ok) {
+        const hits = searchTracksFromResponse(await isrcRes.json())
+        if (hits.length === 1 && hits[0]) {
+          return { status: 'matched', track: hits[0], method: 'isrc' }
+        }
+        if (hits.length > 1) return { status: 'ambiguous' }
+      }
+    }
+
+    const metaParams = new URLSearchParams({
+      q: `track:${query.title} artist:${query.artist}`,
+      type: 'track',
+      limit: '8',
+    })
+    const res = await spotifyFetch(`https://api.spotify.com/v1/search?${metaParams.toString()}`, { headers })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`Spotify search failed (${res.status}): ${body}`)
+    }
+    return pickBestTrackMatch(query, searchTracksFromResponse(await res.json()))
   }
 
   async disconnect(userId: string): Promise<void> {

@@ -8,6 +8,7 @@ import { MailOutlined, UserAddOutlined, DeleteOutlined, CheckOutlined, CloseOutl
 import { ChevronDown, ChevronLeft, Users } from 'lucide-react'
 import * as api from '../lib/api'
 import type { FriendPerson, IncomingShareRequest, ShareListSummary } from '../lib/api'
+import { ConnectedPlatformIcons } from '../components/ConnectedPlatformIcons'
 
 const { Content } = Layout
 const { Text, Title } = Typography
@@ -456,12 +457,20 @@ export function Friends() {
                         }}>
                           {initials}
                         </div>
-                        <Text style={{
-                          color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {person.email || 'Unknown user'}
-                        </Text>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <Text style={{
+                            color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            display: 'block',
+                          }}>
+                            {person.email || 'Unknown user'}
+                          </Text>
+                          {(person.connectedPlatforms?.length ?? 0) > 0 && (
+                            <div style={{ marginTop: 6 }}>
+                              <ConnectedPlatformIcons platforms={person.connectedPlatforms ?? []} size={12} />
+                            </div>
+                          )}
+                        </div>
                       </Flex>
                       {isPending ? (
                         <Tag style={{
@@ -533,12 +542,20 @@ export function Friends() {
                       }}>
                         {initials}
                       </div>
-                      <Text style={{
-                        color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {person.email || 'Unknown user'}
-                      </Text>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <Text style={{
+                          color: '#F1F5F9', fontSize: '14px', fontWeight: 600,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          display: 'block',
+                        }}>
+                          {person.email || 'Unknown user'}
+                        </Text>
+                        {(person.connectedPlatforms?.length ?? 0) > 0 && (
+                          <div style={{ marginTop: 6 }}>
+                            <ConnectedPlatformIcons platforms={person.connectedPlatforms ?? []} size={12} />
+                          </div>
+                        )}
+                      </div>
                     </Flex>
 
                     <div style={{ width: '110px', paddingRight: '16px', flexShrink: 0 }}>

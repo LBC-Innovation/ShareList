@@ -2,12 +2,13 @@ import { useState, type CSSProperties } from 'react'
 import { Card, Flex, Skeleton } from 'antd'
 import { ChevronDown, ChevronLeft } from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
+import { faSpotify, faApple, faSoundcloud } from '@fortawesome/free-brands-svg-icons'
 import { UserAvatar } from './UserAvatar'
 
 const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; color: string }> = {
-  spotify:     { label: 'Spotify',     icon: faSpotify, color: '#1DB954' },
-  apple_music: { label: 'Apple Music', icon: faApple,   color: '#FA243C' },
+  spotify:     { label: 'Spotify',     icon: faSpotify,    color: '#1DB954' },
+  apple_music: { label: 'Apple Music', icon: faApple,      color: '#FA243C' },
+  soundcloud:  { label: 'SoundCloud',  icon: faSoundcloud, color: '#FF5500' },
 }
 
 interface HeroLink {

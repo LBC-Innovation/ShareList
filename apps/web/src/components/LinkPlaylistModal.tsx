@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Modal, Select, Button, Typography, Flex, Space, Divider, Spin, Empty, Input, notification, Tabs } from 'antd'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
+import { faSpotify, faApple, faSoundcloud } from '@fortawesome/free-brands-svg-icons'
 import { CheckCircleOutlined, LoadingOutlined, LinkOutlined, DeleteOutlined, ExclamationCircleFilled } from '@ant-design/icons'
 import * as api from '../lib/api'
 import type { ConnectedService, ShareListLink, StreamingPlaylist } from '../lib/api'
@@ -24,8 +24,9 @@ const SL = {
 }
 
 const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; color: string }> = {
-  spotify:     { label: 'Spotify',     icon: faSpotify, color: '#1DB954' },
-  apple_music: { label: 'Apple Music', icon: faApple,   color: '#FA243C' },
+  spotify:     { label: 'Spotify',     icon: faSpotify,    color: '#1DB954' },
+  apple_music: { label: 'Apple Music', icon: faApple,      color: '#FA243C' },
+  soundcloud:  { label: 'SoundCloud',  icon: faSoundcloud, color: '#FF5500' },
 }
 
 interface LinkPlaylistModalProps {
@@ -322,7 +323,7 @@ export function LinkPlaylistModal({ sharelistId, name, links, isOwner, onClose, 
         }}
       />
       <Text style={{ color: SL.muted, fontSize: '12px', display: 'block', marginTop: '8px', marginBottom: '20px', lineHeight: 1.5 }}>
-        Shown as the title of this ShareList. It does not rename playlists on Spotify or Apple Music.
+        Shown as the title of this ShareList. It does not rename playlists on your streaming services.
       </Text>
 
       {links.length === 0 ? (
@@ -431,8 +432,8 @@ export function LinkPlaylistModal({ sharelistId, name, links, isOwner, onClose, 
       </Text>
       <Text style={{ color: SL.muted, fontSize: '13px', display: 'block', marginBottom: '20px', lineHeight: 1.6 }}>
         {isOwner
-          ? 'This removes your ShareList and your linked playlists from ShareList. Friends who contributed keep their own copy of the playlists they linked. Spotify and Apple Music playlists are not changed, and no songs are removed.'
-          : 'You will leave this shared list. Your linked playlists become your own ShareList on List Library. The owner\'s list stays. Spotify and Apple Music playlists are not changed, and no songs are removed.'}
+          ? 'This removes your ShareList and your linked playlists from ShareList. Friends who contributed keep their own copy of the playlists they linked. Streaming playlists are not changed, and no songs are removed.'
+          : 'You will leave this shared list. Your linked playlists become your own ShareList on List Library. The owner\'s list stays. Streaming playlists are not changed, and no songs are removed.'}
       </Text>
       {confirmDelete ? (
         <Button

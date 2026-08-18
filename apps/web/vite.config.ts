@@ -24,7 +24,7 @@ export default defineConfig({
         id: '/',
         name: 'ShareList',
         short_name: 'ShareList',
-        description: 'Share music playlists across Spotify, Apple Music, and YouTube Music.',
+        description: 'Share music playlists across streaming services.',
         theme_color: '#161819',
         background_color: '#161819',
         display: 'standalone',

@@ -4,6 +4,7 @@ import { Button, Flex, Form, Input, Typography, Alert } from 'antd'
 import { useAuth } from '../context/AuthContext'
 import { updateProfile, isError } from '../lib/api'
 import { UserAvatar } from '../components/UserAvatar'
+import { ConnectedPlatformIcons } from '../components/ConnectedPlatformIcons'
 import { fetchGravatarProfileUrl, openGravatarQuickEditor } from '../lib/avatar'
 
 const SL = {
@@ -131,6 +132,11 @@ export function Profile() {
             >
               {user.email}
             </Typography.Text>
+          )}
+          {user.connectedPlatforms.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <ConnectedPlatformIcons platforms={user.connectedPlatforms} />
+            </div>
           )}
         </div>
       </Flex>

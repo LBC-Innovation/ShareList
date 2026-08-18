@@ -16,7 +16,7 @@
 
 import { Router, type Request, type Response } from 'express'
 import { requireAuth } from '../middleware/auth'
-import { clientOrigins, resolveReturnOrigin, resolveSpotifyRedirectUri } from '../lib/origins'
+import { clientOrigins, resolveReturnOrigin, resolveProviderRedirectUri } from '../lib/origins'
 import { getProvider, listProviders } from '../streaming/registry'
 import { getConnectedProviders, verifyState } from '../streaming/oauthHelpers'
 import { providerErrorHttp } from '../streaming/errors'
@@ -24,6 +24,7 @@ import { providerErrorHttp } from '../streaming/errors'
 // Side-effect imports — register all providers with the registry
 import '../streaming/spotify'
 import '../streaming/apple-music'
+import '../streaming/soundcloud'
 
 const router = Router()
 
@@ -79,10 +80,12 @@ router.get('/:provider/auth-url', requireAuth, async (req: Request, res: Respons
     const p = getProvider(provider)
     const requestedOrigin = typeof req.query['returnOrigin'] === 'string' ? req.query['returnOrigin'] : undefined
     const returnOrigin = resolveReturnOrigin(req, requestedOrigin)
-    const redirectUri = provider === 'spotify' ? resolveSpotifyRedirectUri(req) : undefined
+    const redirectUri = (provider === 'spotify' || provider === 'soundcloud')
+      ? resolveProviderRedirectUri(req, provider)
+      : undefined
     log('info', 'getAuthUrl', { provider, returnOrigin, redirectUri })
     const url = await p.getAuthUrl(req.user!.id, { returnOrigin, redirectUri })
-    res.json({ data: { url }, error: null })
+    res.json({ data: { url, redirectUri }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     const status = message.startsWith('Unknown streaming provider') ? 400 : 500

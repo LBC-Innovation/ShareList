@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { User, Platform, ApiResult, ApiError } from '@sharelist/shared'
+import type { User, ApiResult, ApiError } from '@sharelist/shared'
 import { supabaseAuth, supabaseAdmin } from '../lib/supabase'
 import { requireAuth } from '../middleware/auth'
+import { connectedPlatformsForUser } from '../lib/connectedPlatforms'
 
 const router = Router()
 
@@ -18,17 +19,10 @@ function profileToUser(
   profile: {
     display_name: string | null
     avatar_url: string | null
-    spotify_connected: boolean
-    apple_music_connected: boolean
-    youtube_music_connected: boolean
     created_at: string
-  }
+  },
+  connectedPlatforms: User['connectedPlatforms'],
 ): User {
-  const connectedPlatforms: Platform[] = []
-  if (profile.spotify_connected) connectedPlatforms.push('spotify')
-  if (profile.apple_music_connected) connectedPlatforms.push('apple_music')
-  if (profile.youtube_music_connected) connectedPlatforms.push('youtube_music')
-
   return {
     id: userId,
     email,
@@ -161,7 +155,7 @@ router.post('/password-reset/confirm', async (req: Request, res: Response) => {
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   const { data: profile, error } = await supabaseAdmin
     .from('profiles')
-    .select('display_name, avatar_url, spotify_connected, apple_music_connected, youtube_music_connected, created_at')
+    .select('display_name, avatar_url, created_at')
     .eq('id', req.user!.id)
     .single()
 
@@ -172,7 +166,23 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     return
   }
 
-  const user = profileToUser(req.user!.id, req.user!.email, req.user!.role, req.user!.permissions, profile as Parameters<typeof profileToUser>[4])
+  let connectedPlatforms: User['connectedPlatforms'] = []
+  try {
+    connectedPlatforms = await connectedPlatformsForUser(req.user!.id)
+  } catch (err) {
+    log('warn', 'Failed to load connected platforms for /me', {
+      userId: req.user!.id,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+  const user = profileToUser(
+    req.user!.id,
+    req.user!.email,
+    req.user!.role,
+    req.user!.permissions,
+    profile as Parameters<typeof profileToUser>[4],
+    connectedPlatforms,
+  )
   const result: ApiResult<User> = { data: user, error: null }
   res.json(result)
 })

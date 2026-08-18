@@ -52,7 +52,9 @@ function mapSharelistTracks(sharelist: ShareListDetail | null): Track[] {
       artist: t.artist,
       duration: formatDuration(t.durationMs),
       albumArt: t.imageUrl,
-      platform: t.provider as Track['platform'] | undefined,
+      platform: t.provider,
+      platformIds: t.platformIds,
+      availability: t.availability,
     })
   }
   return tracks
@@ -104,8 +106,11 @@ export function PlaylistView() {
   }
 
   const reportSyncLists = (data: api.CrossSyncResult) => {
-    const { totalAdded, links } = data
+    const { totalAdded, links, totalUnmatched = 0 } = data
     const linkErrors = links.filter(l => l.error)
+    const unmatchedNote = totalUnmatched > 0
+      ? `${totalUnmatched} song${totalUnmatched === 1 ? '' : 's'} could not be matched on every linked service.`
+      : undefined
 
     if (totalAdded === 0 && linkErrors.length > 0) {
       notifyApi.error({
@@ -119,15 +124,17 @@ export function PlaylistView() {
     if (totalAdded === 0) {
       notifyApi.info({
         message: 'Already up to date',
-        description: 'All linked playlists already share the same tracks.',
+        description: unmatchedNote ?? 'All linked playlists already share the same tracks.',
         placement: 'topRight',
       })
       return
     }
-    const details = links
-      .filter(l => l.tracksAdded > 0)
-      .map(l => `${l.tracksAdded} track${l.tracksAdded === 1 ? '' : 's'} → ${l.playlistName}`)
-      .join('\n')
+    const details = [
+      ...links
+        .filter(l => l.tracksAdded > 0)
+        .map(l => `${l.tracksAdded} track${l.tracksAdded === 1 ? '' : 's'} → ${l.playlistName}`),
+      unmatchedNote,
+    ].filter(Boolean).join('\n')
     notifyApi.success({
       message: `Sync Lists complete — ${totalAdded} track${totalAdded === 1 ? '' : 's'} added`,
       description: details || undefined,

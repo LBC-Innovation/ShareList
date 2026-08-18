@@ -5,7 +5,7 @@ export class ProviderRateLimitError extends Error {
   readonly retryAfterSeconds: number
   readonly retryAt: Date
 
-  constructor(retryAfterSeconds: number, providerDisplayName = 'Spotify') {
+  constructor(retryAfterSeconds: number, providerDisplayName = 'A music service') {
     const seconds = Math.max(1, Math.ceil(retryAfterSeconds))
     const retryAt = new Date(Date.now() + seconds * 1000)
     super(

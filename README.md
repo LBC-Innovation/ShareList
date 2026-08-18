@@ -69,6 +69,8 @@ Copy `.env.example` to `.env` (the setup script does this automatically) and fil
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) |
 | `SPOTIFY_REDIRECT_URI` | Must match the URI registered in the Spotify app |
 | `APPLE_MUSIC_TEAM_ID` / `APPLE_MUSIC_KEY_ID` / `APPLE_MUSIC_PRIVATE_KEY` | Apple Developer account |
+| `SOUNDCLOUD_CLIENT_ID` / `SOUNDCLOUD_CLIENT_SECRET` | [SoundCloud app registration](https://soundcloud.com/you/apps) (Artist Pro required) |
+| `SOUNDCLOUD_REDIRECT_URI` | Must match the URI registered in the SoundCloud app |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | Google Cloud Console → APIs & Services → Credentials |
 
 ## Tech stack
@@ -86,18 +88,19 @@ Environment variables live in each Vercel project's settings. The frontend deplo
 
 These diagrams follow the live code paths. The browser talks only to the ShareList API (`apps/api`). The API talks to vendors. Authenticated API calls send `Authorization: Bearer <access_token>`; the API validates that JWT with Supabase Auth (`auth.getUser`) and checks `profiles.status` before continuing.
 
-YouTube Music is reserved in the schema and settings copy. Only **Spotify** and **Apple Music** are wired up today.
+YouTube Music is reserved in the schema and settings copy. **Spotify**, **Apple Music**, and **SoundCloud** are wired up today.
 
 | Participant | Resource | Vendor |
 |---|---|---|
 | ShareList Web | React SPA (`apps/web`) | this repo |
 | ShareList API | Express (`apps/api`) | this repo |
 | Supabase Auth | Auth users, sessions, confirmation email | [Supabase](https://supabase.com) |
-| Supabase Postgres | `profiles`, `connected_services`, `sharelists`, `sharelist_links`, `sharelist_collaborators`, `sharelist_invites`, `sharelist_sync_log` | [Supabase](https://supabase.com) |
+| Supabase Postgres | `profiles`, `connected_services`, `sharelists`, `sharelist_links`, `sharelist_collaborators`, `sharelist_invites`, `sharelist_sync_log`, `track_mappings` | [Supabase](https://supabase.com) |
 | Spotify Accounts | OAuth authorize + token | [Spotify](https://developer.spotify.com) |
 | Spotify Web API | Playlists and tracks | [Spotify](https://developer.spotify.com) |
 | MusicKit JS | In-page Apple Music authorization | [Apple](https://developer.apple.com/musickit/) (CDN) |
 | Apple Music API | Library playlists and tracks | [Apple](https://developer.apple.com/documentation/applemusicapi) |
+| SoundCloud | OAuth 2.1 + playlists API | [SoundCloud](https://developers.soundcloud.com/docs/api/guide) |
 | Resend | Invite email delivery | [Resend](https://resend.com) |
 
 ### 1. Account signup
@@ -174,7 +177,7 @@ sequenceDiagram
     DB-->>API: none connected
     API-->>Web: []
 
-    Note over User,Platform: Connect Spotify or Apple Music (see flow 3)
+    Note over User,Platform: Connect Spotify, Apple Music, or SoundCloud (see flow 3)
     User->>Web: Create ShareList
     Web->>API: GET /streaming/connected
     API->>DB: SELECT connected_services
@@ -281,7 +284,7 @@ sequenceDiagram
 
 ### 4. Fetch platform data and link a playlist
 
-Two product paths share the same fetch. Creating a ShareList writes the first (primary) link. Linking another playlist onto an existing ShareList also runs **Sync Lists** (`runCrossSync`) so missing tracks are copied into each linked playlist on the same service.
+Two product paths share the same fetch. Creating a ShareList writes the first (primary) link. Linking another playlist onto an existing ShareList also runs **Sync Lists** (`runCrossSync`) so missing tracks are copied into each linked playlist when a match exists on that service.
 
 ```mermaid
 sequenceDiagram

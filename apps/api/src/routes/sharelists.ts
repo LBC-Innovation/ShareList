@@ -22,11 +22,14 @@ import { supabaseAdmin, supabaseAuth } from '../lib/supabase'
 import { getProvider } from '../streaming/registry'
 import { isProviderRateLimitError, providerErrorHttp } from '../streaming/errors'
 import { runCrossSync, applyLinkedPlaylistOrder } from '../services/crossSync'
+import { collapseTracksWithMappings, loadMappingsForTracks, resolveMappingsForTracks } from '../services/trackMatcher'
 import { getAccessibleSharelist, listAccessibleSharelists } from '../lib/sharelistAccess'
+import type { StreamingTrack } from '../streaming/types'
 
 // Side-effect: ensure providers are registered
 import '../streaming/spotify'
 import '../streaming/apple-music'
+import '../streaming/soundcloud'
 
 const router = Router()
 
@@ -38,7 +41,7 @@ function trackFetchWarning(reason: unknown, playlistName: string): string {
   if (isProviderRateLimitError(reason)) return reason.message
   const errMsg = reason instanceof Error ? reason.message : 'Unknown'
   if (errMsg.includes('403') || errMsg.includes('must own it')) {
-    return `${playlistName}: Spotify only returns tracks for playlists the connected account owns or collaborates on`
+    return `${playlistName}: Tracks are only available for playlists the connected account owns or collaborates on`
   }
   return `${playlistName}: ${errMsg}`
 }
@@ -192,6 +195,20 @@ function uniqueSharelistTracks<T extends { id: string; provider?: string }>(trac
     unique.push(track)
   }
   return unique
+}
+
+async function decorateSharelistTracks(
+  tracks: Array<StreamingTrack & { provider?: string }>,
+  linkRows: SharelistLinkRow[],
+  resolveMissing: boolean,
+): Promise<Array<StreamingTrack & { provider?: string }>> {
+  const unique = uniqueSharelistTracks(tracks)
+  const destLinks = linkRows.map(l => ({ provider: l.provider, userId: l.user_id }))
+  const linkedProviders = [...new Set(linkRows.map(l => l.provider))]
+  const mappings = resolveMissing
+    ? await resolveMappingsForTracks(unique, destLinks)
+    : await loadMappingsForTracks(unique, linkedProviders)
+  return collapseTracksWithMappings(unique, mappings, linkedProviders)
 }
 
 // ── GET /sharelists ───────────────────────────────────────────────────────────
@@ -382,7 +399,11 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    const uniqueTracks = uniqueSharelistTracks(tracks as Array<{ id: string; provider?: string }>)
+    const uniqueTracks = await decorateSharelistTracks(
+      tracks as Array<StreamingTrack & { provider?: string }>,
+      linkRows,
+      false,
+    )
     const members = await listSharelistMembers(id, (list as SharelistRow).owner_id)
 
     res.json({
@@ -527,7 +548,11 @@ router.post('/:id/sync', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    const uniqueTracks = uniqueSharelistTracks(tracks as Array<{ id: string; provider?: string }>)
+    const uniqueTracks = await decorateSharelistTracks(
+      tracks as Array<StreamingTrack & { provider?: string }>,
+      linkRows,
+      true,
+    )
     const members = await listSharelistMembers(id, (list as SharelistRow).owner_id)
 
     res.json({

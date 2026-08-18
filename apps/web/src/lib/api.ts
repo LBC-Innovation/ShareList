@@ -296,9 +296,11 @@ export function getConnectedServices(): Promise<ApiResult<ConnectedService[]>> {
   return request<ConnectedService[]>('/streaming/connected')
 }
 
-export function getStreamingAuthUrl(provider: string): Promise<ApiResult<{ url: string }>> {
+export function getStreamingAuthUrl(
+  provider: string,
+): Promise<ApiResult<{ url: string; redirectUri?: string }>> {
   const params = new URLSearchParams({ returnOrigin: window.location.origin })
-  return request<{ url: string }>(`/streaming/${provider}/auth-url?${params.toString()}`)
+  return request<{ url: string; redirectUri?: string }>(`/streaming/${provider}/auth-url?${params.toString()}`)
 }
 
 export function submitAppleMusicToken(
@@ -341,6 +343,11 @@ export interface ShareListSummary {
   links: ShareListLink[]
 }
 
+export interface TrackAvailability {
+  provider: string
+  status: 'present' | 'matched' | 'unmatched' | 'ambiguous' | 'unknown'
+}
+
 export interface ShareListTrack {
   id: string
   title: string
@@ -350,6 +357,8 @@ export interface ShareListTrack {
   durationMs: number
   imageUrl?: string
   externalUrl?: string
+  platformIds?: Record<string, string>
+  availability?: TrackAvailability[]
 }
 
 export interface ShareListMember {
@@ -413,6 +422,7 @@ export interface CrossSyncLinkResult {
   playlistName: string
   tracksAdded: number
   skipped: number
+  unmatched?: number
   error?: string
 }
 
@@ -420,6 +430,7 @@ export interface CrossSyncResult {
   sharelistId: string
   links: CrossSyncLinkResult[]
   totalAdded: number
+  totalUnmatched?: number
 }
 
 export function crossSyncShareList(id: string): Promise<ApiResult<CrossSyncResult>> {
@@ -525,6 +536,7 @@ export interface FriendPerson {
   email: string
   status: 'pending' | 'active'
   sharedListIds: string[]
+  connectedPlatforms: string[]
 }
 
 export interface InvitePreview {
