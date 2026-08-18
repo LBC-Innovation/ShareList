@@ -26,6 +26,7 @@ import {
 import * as api from '../lib/api'
 import type { StreamingProvider, ConnectedService } from '../lib/api'
 import { noteDocumentNavigation } from '../lib/pwa-debug'
+import { waitForOAuthPopup } from '../lib/oauthPopup'
 
 const { Text, Title } = Typography
 
@@ -131,6 +132,25 @@ export function LinkPlatformModal({ onClose, onConnected }: LinkPlatformModalPro
       if (activeProvider.name === 'spotify') {
         noteDocumentNavigation(url, 'spotify-oauth-leave')
         window.location.href = url   // browser leaves page; callback redirects back
+        return
+      }
+
+      // ── SoundCloud: popup OAuth so a blank provider page doesn't strand us ─
+      if (activeProvider.name === 'soundcloud') {
+        noteDocumentNavigation(url, 'soundcloud-oauth-popup')
+        const outcome = await waitForOAuthPopup(url, 'soundcloud', urlRes.data.redirectUri)
+        if (!outcome.ok) {
+          setConnectError(outcome.error)
+          return
+        }
+        setConnectSuccess(true)
+        onConnected?.(activeProvider.name)
+        setTimeout(() => {
+          void loadData()
+          setStep('pick')
+          setActiveProvider(null)
+          setConnectSuccess(false)
+        }, 1500)
         return
       }
 
@@ -400,6 +420,20 @@ export function LinkPlatformModal({ onClose, onConnected }: LinkPlatformModalPro
                       borderRadius: '10px',
                       background: 'rgba(239, 68, 68, 0.1)',
                       border: '1px solid rgba(239, 68, 68, 0.3)',
+                    }}
+                  />
+                )}
+
+                {isConnecting && activeProvider.name === 'soundcloud' && !connectError && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="Finish sign-in in the SoundCloud window"
+                    description="If that window is blank instead of a login form, close it. SoundCloud only continues when the Redirect URI on your app matches this API callback exactly."
+                    style={{
+                      borderRadius: '10px',
+                      background: 'rgba(56, 189, 248, 0.08)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
                     }}
                   />
                 )}

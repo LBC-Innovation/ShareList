@@ -19,7 +19,7 @@ const STEPS: Step[] = [
   {
     n: '01',
     title: 'Connect a music service',
-    body: 'Open Settings and connect Spotify, Apple Music, or SoundCloud. ShareList stores the connection on the server — it never streams audio. It only reads and updates playlist metadata and track lists.',
+    body: 'Open Settings and connect a music service. ShareList stores the connection on the server — it never streams audio. It only reads and updates playlist metadata and track lists.',
   },
   {
     n: '02',
@@ -79,7 +79,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'sharelist',
         term: 'ShareList',
-        meaning: 'A shared list in this app that points at one or more playlists on Spotify, Apple Music, or SoundCloud. It is a sharing layer, not a music player.',
+        meaning: 'A shared list in this app that points at one or more playlists on a streaming service. It is a sharing layer, not a music player.',
       },
       {
         key: 'my-lists',
@@ -169,7 +169,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'delete',
         term: 'Delete ShareList',
-        meaning: 'The owner removes their ShareList. Friends who contributed keep their own copies. No streaming playlist is deleted and no songs are removed from Spotify or Apple Music.',
+        meaning: 'The owner removes their ShareList. Friends who contributed keep their own copies. No streaming playlist is deleted and no songs are removed from your music services.',
       },
     ],
   },
@@ -226,7 +226,7 @@ export function HowToUse() {
           How to use ShareList
         </Title>
         <Paragraph style={{ color: SL.muted, fontSize: 15, lineHeight: 1.65, margin: 0 }}>
-          ShareList lets people on different accounts share a playlist. Each person keeps their own playlist on Spotify, Apple Music, or SoundCloud. ShareList is the list in the middle — it does not play songs.
+          ShareList lets people on different accounts share a playlist. Each person keeps their own playlist on their music service. ShareList is the list in the middle — it does not play songs.
         </Paragraph>
       </Flex>
 

@@ -223,7 +223,7 @@ export function CreateShareListForm() {
               No music services connected
             </Text>
             <Text style={{ color: '#64748B', fontSize: '13px', lineHeight: '1.6', display: 'block', marginBottom: '20px' }}>
-              Connect Spotify or Apple Music in Settings before creating a ShareList.
+              Connect a music service in Settings before creating a ShareList.
             </Text>
           </div>
           <Button

@@ -296,9 +296,11 @@ export function getConnectedServices(): Promise<ApiResult<ConnectedService[]>> {
   return request<ConnectedService[]>('/streaming/connected')
 }
 
-export function getStreamingAuthUrl(provider: string): Promise<ApiResult<{ url: string }>> {
+export function getStreamingAuthUrl(
+  provider: string,
+): Promise<ApiResult<{ url: string; redirectUri?: string }>> {
   const params = new URLSearchParams({ returnOrigin: window.location.origin })
-  return request<{ url: string }>(`/streaming/${provider}/auth-url?${params.toString()}`)
+  return request<{ url: string; redirectUri?: string }>(`/streaming/${provider}/auth-url?${params.toString()}`)
 }
 
 export function submitAppleMusicToken(
@@ -534,6 +536,7 @@ export interface FriendPerson {
   email: string
   status: 'pending' | 'active'
   sharedListIds: string[]
+  connectedPlatforms: string[]
 }
 
 export interface InvitePreview {

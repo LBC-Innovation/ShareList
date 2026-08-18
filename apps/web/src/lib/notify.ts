@@ -8,7 +8,7 @@ export function notifyApiFailure(
 ): void {
   const rateLimited = result.error.code === 'PROVIDER_RATE_LIMITED'
   notifyApi[rateLimited ? 'warning' : 'error']({
-    message: rateLimited ? 'Spotify is rate limiting requests' : title,
+    message: rateLimited ? 'A music service is rate limiting requests' : title,
     description: result.error.message,
     placement: 'topRight',
     duration: rateLimited ? 12 : 4.5,
@@ -22,7 +22,7 @@ export function notifyShareListWarnings(
   if (!warnings?.length) return
   const rateLimited = warnings.some(warning => warning.toLowerCase().includes('rate limiting'))
   notifyApi.warning({
-    message: rateLimited ? 'Spotify is rate limiting requests' : 'Some playlists could not be loaded',
+    message: rateLimited ? 'A music service is rate limiting requests' : 'Some playlists could not be loaded',
     description: warnings[0],
     placement: 'topRight',
     duration: 12,

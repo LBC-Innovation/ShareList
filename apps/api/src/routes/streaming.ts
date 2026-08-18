@@ -85,7 +85,7 @@ router.get('/:provider/auth-url', requireAuth, async (req: Request, res: Respons
       : undefined
     log('info', 'getAuthUrl', { provider, returnOrigin, redirectUri })
     const url = await p.getAuthUrl(req.user!.id, { returnOrigin, redirectUri })
-    res.json({ data: { url }, error: null })
+    res.json({ data: { url, redirectUri }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     const status = message.startsWith('Unknown streaming provider') ? 400 : 500

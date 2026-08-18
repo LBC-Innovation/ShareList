@@ -41,7 +41,7 @@ function trackFetchWarning(reason: unknown, playlistName: string): string {
   if (isProviderRateLimitError(reason)) return reason.message
   const errMsg = reason instanceof Error ? reason.message : 'Unknown'
   if (errMsg.includes('403') || errMsg.includes('must own it')) {
-    return `${playlistName}: Spotify only returns tracks for playlists the connected account owns or collaborates on`
+    return `${playlistName}: Tracks are only available for playlists the connected account owns or collaborates on`
   }
   return `${playlistName}: ${errMsg}`
 }

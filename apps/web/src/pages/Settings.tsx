@@ -17,6 +17,8 @@ import { LinkServiceModal } from '../components/LinkServiceModal'
 import { InstallInstructionsModal } from '../components/InstallInstructionsModal'
 import { BrandLogo } from '../components/BrandLogo'
 import { usePwaInstall } from '../hooks/usePwaInstall'
+import { describeOAuthError, notifyOAuthOpenerAndClose } from '../lib/oauthPopup'
+import { useAuth } from '../context/AuthContext'
 
 const { Content } = Layout
 const { Title, Text } = Typography
@@ -44,6 +46,7 @@ export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const screens = Grid.useBreakpoint()
   const isCompact = !screens.md
+  const { refreshUser } = useAuth()
 
   const { installed, ios, copy, hasNativePrompt, install } = usePwaInstall()
   const [showInstallHelp, setShowInstallHelp] = useState(false)
@@ -76,6 +79,8 @@ export function Settings() {
   // ── Handle post-OAuth redirect params ────────────────────────────────────
 
   useEffect(() => {
+    if (notifyOAuthOpenerAndClose()) return
+
     const connectedProvider = searchParams.get('connected')
     const errorMsg = searchParams.get('error')
     const errorProvider = searchParams.get('provider')
@@ -91,12 +96,13 @@ export function Settings() {
       // Remove params so a page refresh doesn't re-fire the notification
       setSearchParams({}, { replace: true })
       void load()
+      void refreshUser()
     } else if (errorMsg) {
       notifyApi.error({
         message: `Connection failed${errorProvider ? ` (${errorProvider})` : ''}`,
-        description: decodeURIComponent(errorMsg),
+        description: describeOAuthError(errorMsg, errorProvider ?? undefined),
         placement: 'topRight',
-        duration: 6,
+        duration: 8,
       })
       setSearchParams({}, { replace: true })
     }
@@ -115,6 +121,7 @@ export function Settings() {
       }
       setConnected(prev => prev.filter(c => c.provider !== providerName))
       notifyApi.success({ message: `${displayName} disconnected`, placement: 'topRight', duration: 3 })
+      void refreshUser()
     } finally {
       setDisconnecting(null)
     }
@@ -443,6 +450,7 @@ export function Settings() {
           onConnected={() => {
             setLinkProvider(null)
             void load()
+            void refreshUser()
           }}
         />
       )}

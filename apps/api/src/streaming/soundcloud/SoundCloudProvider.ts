@@ -79,7 +79,7 @@ interface SoundCloudTrack {
   permalink_url?: string
   isrc?: string | null
   metadata_artist?: string | null
-  user?: { username?: string }
+  user?: { username?: string; avatar_url?: string | null }
 }
 
 interface SoundCloudPlaylist {
@@ -125,6 +125,42 @@ function asTrackId(id: number | string | undefined): string | null {
   return value.length > 0 ? value : null
 }
 
+function numericResourceId(id: string): string | null {
+  const trimmed = id.trim()
+  const fromUrn = /^soundcloud:(?:tracks|playlists):(\d+)$/.exec(trimmed)
+  if (fromUrn?.[1]) return fromUrn[1]
+  return /^\d+$/.test(trimmed) ? trimmed : null
+}
+
+function playlistUrn(playlistId: string): string | null {
+  const numeric = numericResourceId(playlistId)
+  return numeric ? `soundcloud:playlists:${numeric}` : null
+}
+
+function trackUrn(trackId: string): string | null {
+  const numeric = numericResourceId(trackId)
+  return numeric ? `soundcloud:tracks:${numeric}` : null
+}
+
+/** SoundCloud artwork_url defaults to 100×100 (`-large`). Prefer 500px for covers. */
+function upgradeArtworkUrl(url?: string | null): string | undefined {
+  if (!url) return undefined
+  return url.replace('-large.', '-t500x500.')
+}
+
+function trackImageUrl(raw: SoundCloudTrack): string | undefined {
+  return upgradeArtworkUrl(raw.artwork_url) ?? upgradeArtworkUrl(raw.user?.avatar_url)
+}
+
+function firstTrackImageUrl(tracks?: SoundCloudTrack[]): string | undefined {
+  if (!tracks) return undefined
+  for (const track of tracks) {
+    const imageUrl = trackImageUrl(track)
+    if (imageUrl) return imageUrl
+  }
+  return undefined
+}
+
 function mapTrack(raw: SoundCloudTrack): StreamingTrack | null {
   const id = asTrackId(raw.id)
   if (!id || !raw.title) return null
@@ -134,7 +170,7 @@ function mapTrack(raw: SoundCloudTrack): StreamingTrack | null {
     title: raw.title,
     artist,
     durationMs: raw.duration ?? 0,
-    imageUrl: raw.artwork_url ?? undefined,
+    imageUrl: trackImageUrl(raw),
     externalUrl: raw.permalink_url,
     isrc: raw.isrc?.trim() || undefined,
   }
@@ -148,7 +184,7 @@ function mapPlaylist(raw: SoundCloudPlaylist): StreamingPlaylist | null {
     name: raw.title,
     description: raw.description ?? undefined,
     trackCount: raw.track_count ?? raw.tracks?.length ?? 0,
-    imageUrl: raw.artwork_url ?? undefined,
+    imageUrl: upgradeArtworkUrl(raw.artwork_url) ?? firstTrackImageUrl(raw.tracks),
     externalUrl: raw.permalink_url,
   }
 }
@@ -182,6 +218,7 @@ export class SoundCloudProvider implements StreamingProvider {
       code_challenge: challenge,
       code_challenge_method: 'S256',
       state,
+      display: 'popup',
     })
     return `${AUTH}/authorize?${params.toString()}`
   }
@@ -207,7 +244,7 @@ export class SoundCloudProvider implements StreamingProvider {
   async getPlaylists(userId: string): Promise<StreamingPlaylist[]> {
     const accessToken = await this.refreshTokenIfNeeded(userId)
     const playlists: StreamingPlaylist[] = []
-    let url: string | null = `${API}/me/playlists?show_tracks=false&linked_partitioning=true&limit=50`
+    let url: string | null = `${API}/me/playlists?show_tracks=true&linked_partitioning=true&limit=50`
 
     while (url) {
       const res = await soundcloudFetch(url, { headers: authHeader(accessToken) })
@@ -230,7 +267,7 @@ export class SoundCloudProvider implements StreamingProvider {
   async getPlaylist(userId: string, playlistId: string): Promise<StreamingPlaylist> {
     const accessToken = await this.refreshTokenIfNeeded(userId)
     const res = await soundcloudFetch(
-      `${API}/playlists/${encodeURIComponent(playlistId)}?show_tracks=false`,
+      `${API}/playlists/${encodeURIComponent(playlistId)}`,
       { headers: authHeader(accessToken) },
     )
     if (!res.ok) {
@@ -239,6 +276,9 @@ export class SoundCloudProvider implements StreamingProvider {
     }
     const mapped = mapPlaylist((await res.json()) as SoundCloudPlaylist)
     if (!mapped) throw new Error(`SoundCloud playlist ${playlistId} not found`)
+    if (!mapped.imageUrl) {
+      mapped.imageUrl = await this.firstTrackImage(accessToken, playlistId)
+    }
     return mapped
   }
 
@@ -377,19 +417,52 @@ export class SoundCloudProvider implements StreamingProvider {
     }
   }
 
+  private async firstTrackImage(accessToken: string, playlistId: string): Promise<string | undefined> {
+    const res = await soundcloudFetch(
+      `${API}/playlists/${encodeURIComponent(playlistId)}/tracks?linked_partitioning=true&limit=20`,
+      { headers: authHeader(accessToken) },
+    )
+    if (!res.ok) return undefined
+    const data = (await res.json()) as CollectionResponse<SoundCloudTrack> | SoundCloudTrack[]
+    const items = Array.isArray(data) ? data : (data.collection ?? [])
+    return firstTrackImageUrl(items)
+  }
+
   private async putPlaylistTracks(userId: string, playlistId: string, trackIds: string[]): Promise<void> {
     const accessToken = await this.refreshTokenIfNeeded(userId)
-    const res = await soundcloudFetch(`${API}/playlists/${encodeURIComponent(playlistId)}`, {
+    const playlist = playlistUrn(playlistId)
+    if (!playlist) throw new Error(`Invalid SoundCloud playlist id: ${playlistId}`)
+
+    const tracks: Array<{ urn: string }> = []
+    const skipped: string[] = []
+    for (const id of trackIds) {
+      const urn = trackUrn(id)
+      if (!urn) {
+        skipped.push(id)
+        continue
+      }
+      tracks.push({ urn })
+    }
+    if (skipped.length > 0) {
+      console.log(JSON.stringify({
+        level: 'warn',
+        message: 'SoundCloud skipped invalid track ids on playlist update',
+        playlistId,
+        skippedCount: skipped.length,
+        skipped: skipped.slice(0, 8),
+      }))
+    }
+    if (tracks.length === 0) {
+      throw new Error('SoundCloud playlist update has no valid track URNs')
+    }
+
+    const res = await soundcloudFetch(`${API}/playlists/${playlist}`, {
       method: 'PUT',
       headers: {
         ...authHeader(accessToken),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        playlist: {
-          tracks: trackIds.map(id => ({ id: Number(id) })),
-        },
-      }),
+      body: JSON.stringify({ playlist: { tracks } }),
     })
     if (!res.ok) {
       const body = await res.text()

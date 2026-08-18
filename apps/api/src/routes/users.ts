@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { User, Platform, ApiResult, ApiError } from '@sharelist/shared'
+import type { User, ApiResult, ApiError } from '@sharelist/shared'
 import { supabaseAuth, supabaseAdmin } from '../lib/supabase'
 import { requireAuth } from '../middleware/auth'
+import { connectedPlatformsForUser } from '../lib/connectedPlatforms'
 
 const router = Router()
 
@@ -14,18 +15,16 @@ type ProfileRow = {
   id: string
   display_name: string | null
   avatar_url: string | null
-  spotify_connected: boolean
-  apple_music_connected: boolean
-  youtube_music_connected: boolean
   created_at: string
 }
 
-function profileToUser(email: string, role: string, permissions: string[], profile: ProfileRow): User {
-  const connectedPlatforms: Platform[] = []
-  if (profile.spotify_connected) connectedPlatforms.push('spotify')
-  if (profile.apple_music_connected) connectedPlatforms.push('apple_music')
-  if (profile.youtube_music_connected) connectedPlatforms.push('youtube_music')
-
+function profileToUser(
+  email: string,
+  role: string,
+  permissions: string[],
+  profile: ProfileRow,
+  connectedPlatforms: User['connectedPlatforms'],
+): User {
   return {
     id: profile.id,
     email,
@@ -50,7 +49,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('id, display_name, avatar_url, spotify_connected, apple_music_connected, youtube_music_connected, created_at')
+    .select('id, display_name, avatar_url, created_at')
     .eq('id', id)
     .single()
 
@@ -72,7 +71,16 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
 
   const role = (authData.user.app_metadata?.['role'] as string | undefined) ?? 'user'
   const permissions = (authData.user.app_metadata?.['permissions'] as string[] | undefined) ?? []
-  const user = profileToUser(authData.user.email ?? '', role, permissions, profile as ProfileRow)
+  let connectedPlatforms: User['connectedPlatforms'] = []
+  try {
+    connectedPlatforms = await connectedPlatformsForUser(id)
+  } catch (err) {
+    log('warn', 'Failed to load connected platforms for user', {
+      requestedId: id,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+  const user = profileToUser(authData.user.email ?? '', role, permissions, profile as ProfileRow, connectedPlatforms)
   const result: ApiResult<User> = { data: user, error: null }
   res.json(result)
 })
@@ -118,7 +126,7 @@ router.patch('/:id', requireAuth, async (req: Request, res: Response) => {
     .from('profiles')
     .update(updates)
     .eq('id', id)
-    .select('id, display_name, avatar_url, spotify_connected, apple_music_connected, youtube_music_connected, created_at')
+    .select('id, display_name, avatar_url, created_at')
     .single()
 
   if (error || !profile) {
@@ -128,7 +136,16 @@ router.patch('/:id', requireAuth, async (req: Request, res: Response) => {
     return
   }
 
-  const user = profileToUser(req.user!.email, req.user!.role, req.user!.permissions, profile as ProfileRow)
+  let connectedPlatforms: User['connectedPlatforms'] = []
+  try {
+    connectedPlatforms = await connectedPlatformsForUser(id)
+  } catch (err) {
+    log('warn', 'Failed to load connected platforms after profile update', {
+      userId: id,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+  const user = profileToUser(req.user!.email, req.user!.role, req.user!.permissions, profile as ProfileRow, connectedPlatforms)
   const result: ApiResult<User> = { data: user, error: null }
   res.json(result)
 })

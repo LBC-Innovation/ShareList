@@ -6,16 +6,21 @@
  * Spotify flow:  fetches auth URL → navigates the browser there → Spotify
  *   redirects back to the API callback → API redirects to /settings?connected=spotify
  *
+ * SoundCloud flow:  opens OAuth in a popup so a blank SoundCloud error page
+ *   (e.g. redirect_uri_mismatch) cannot strand the user. Closing the popup
+ *   surfaces an in-app error with the required Redirect URI.
+ *
  * Apple Music flow:  fetches auth URL (contains developerToken + state) →
  *   loads MusicKit JS → prompts user for permission → POSTs Music User Token
  *   back to the API callback → shows success in-modal
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Modal, Button, Typography, Flex, Alert, Space } from 'antd'
 import { CheckCircleOutlined, LinkOutlined } from '@ant-design/icons'
 import * as api from '../lib/api'
 import { noteDocumentNavigation } from '../lib/pwa-debug'
+import { waitForOAuthPopup } from '../lib/oauthPopup'
 
 const { Text, Title } = Typography
 
@@ -62,10 +67,14 @@ interface LinkServiceModalProps {
 
 export function LinkServiceModal({ provider, displayName, onClose, onConnected }: LinkServiceModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [awaitingPopup, setAwaitingPopup] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const popupAbortRef = useRef<AbortController | null>(null)
 
   const meta = PROVIDER_META[provider] ?? { color: SL.accent, icon: '🎵', description: '' }
+
+  useEffect(() => () => popupAbortRef.current?.abort(), [])
 
   // ── Spotify: redirect-based OAuth ────────────────────────────────────────────
   const handleRedirectConnect = async () => {
@@ -78,10 +87,33 @@ export function LinkServiceModal({ provider, displayName, onClose, onConnected }
         return
       }
       noteDocumentNavigation(result.data.url, `${provider}-oauth-leave`)
-      window.location.href = result.data.url
+      if (provider !== 'soundcloud') {
+        window.location.href = result.data.url
+        return
+      }
+      const abort = new AbortController()
+      popupAbortRef.current = abort
+      setAwaitingPopup(true)
+      const outcome = await waitForOAuthPopup(
+        result.data.url,
+        provider,
+        result.data.redirectUri,
+        abort.signal,
+      )
+      setAwaitingPopup(false)
+      if (!outcome.ok) {
+        setError(outcome.error)
+        return
+      }
+      setSuccess(true)
+      setTimeout(() => {
+        onConnected()
+        onClose()
+      }, 1200)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get auth URL')
     } finally {
+      setAwaitingPopup(false)
       setIsLoading(false)
     }
   }
@@ -161,7 +193,10 @@ export function LinkServiceModal({ provider, displayName, onClose, onConnected }
   return (
     <Modal
       open
-      onCancel={onClose}
+      onCancel={() => {
+        popupAbortRef.current?.abort()
+        onClose()
+      }}
       footer={null}
       width={440}
       style={{ padding: 0 }}
@@ -238,10 +273,28 @@ export function LinkServiceModal({ provider, displayName, onClose, onConnected }
               />
             )}
 
+            {awaitingPopup && !error && (
+              <Alert
+                type="info"
+                showIcon
+                message="Finish sign-in in the SoundCloud window"
+                description="If that window is blank instead of a login form, close it. SoundCloud only continues when the Redirect URI on your app matches this API callback exactly."
+                style={{
+                  borderRadius: '10px',
+                  background: 'rgba(56, 189, 248, 0.08)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                }}
+              />
+            )}
+
             <Flex gap={12} justify="flex-end">
               <Button
-                onClick={onClose}
-                disabled={isLoading}
+                onClick={() => {
+                  popupAbortRef.current?.abort()
+                  onClose()
+                }}
+                disabled={isLoading && !awaitingPopup}
+
                 style={{
                   background: 'transparent',
                   border: '1px solid rgba(56, 189, 248, 0.2)',
