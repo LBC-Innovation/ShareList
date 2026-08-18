@@ -2,9 +2,17 @@ import { useLayoutEffect, useRef } from 'react'
 import { Avatar, Flex } from 'antd'
 import { Shuffle } from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
+import { faSpotify, faApple, faSoundcloud } from '@fortawesome/free-brands-svg-icons'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { TrackAvailability } from '../lib/api'
 
 export const SHUFFLE_MOVE_MS = 1500
+
+const PROVIDER_LABEL: Record<string, string> = {
+  spotify: 'Spotify',
+  apple_music: 'Apple Music',
+  soundcloud: 'SoundCloud',
+}
 
 export interface Track {
   id: string
@@ -13,7 +21,9 @@ export interface Track {
   duration: string
   albumArt?: string
   isPlaying?: boolean
-  platform?: 'spotify' | 'apple_music'
+  platform?: string
+  platformIds?: Record<string, string>
+  availability?: TrackAvailability[]
 }
 
 function trackKey(track: Track): string {
@@ -34,6 +44,53 @@ function stackTop(order: Track[], index: number, heights: Map<string, number>): 
   return top
 }
 
+function availabilityIcons(track: Track): Array<{
+  provider: string
+  icon: IconDefinition
+  color: string
+  muted: boolean
+  title: string
+}> {
+  const items: Array<{
+    provider: string
+    icon: IconDefinition
+    color: string
+    muted: boolean
+    title: string
+  }> = []
+
+  const seen = new Set<string>()
+  const add = (provider: string, muted: boolean, title: string) => {
+    const meta = PLATFORM_META[provider]
+    if (!meta || seen.has(provider)) return
+    seen.add(provider)
+    items.push({ provider, icon: meta.icon, color: meta.color, muted, title })
+  }
+
+  if (track.availability && track.availability.length > 0) {
+    for (const row of track.availability) {
+      const label = PROVIDER_LABEL[row.provider] ?? row.provider
+      if (row.status === 'present' || row.status === 'matched') {
+        add(row.provider, false, `Available on ${label}`)
+      } else if (row.status === 'ambiguous') {
+        add(row.provider, true, `Possible match on ${label} — not synced`)
+      } else if (row.status === 'unmatched') {
+        add(row.provider, true, `Not available on ${label}`)
+      }
+    }
+  } else if (track.platformIds) {
+    for (const provider of Object.keys(track.platformIds)) {
+      const label = PROVIDER_LABEL[provider] ?? provider
+      add(provider, false, `Available on ${label}`)
+    }
+  } else if (track.platform) {
+    const label = PROVIDER_LABEL[track.platform] ?? track.platform
+    add(track.platform, false, `From ${label}`)
+  }
+
+  return items
+}
+
 interface TrackListProps {
   tracks: Track[]
   shuffling?: boolean
@@ -41,9 +98,10 @@ interface TrackListProps {
   onShuffle?: () => void
 }
 
-const PLATFORM_META: Record<string, { icon: typeof faSpotify; color: string }> = {
-  spotify:     { icon: faSpotify, color: '#1DB954' },
-  apple_music: { icon: faApple,  color: '#FA243C' },
+const PLATFORM_META: Record<string, { icon: IconDefinition; color: string }> = {
+  spotify:     { icon: faSpotify,    color: '#1DB954' },
+  apple_music: { icon: faApple,      color: '#FA243C' },
+  soundcloud:  { icon: faSoundcloud, color: '#FF5500' },
 }
 
 export function TrackList({ tracks, shuffling = false, shuffleFrom = null, onShuffle }: TrackListProps) {
@@ -203,18 +261,28 @@ export function TrackList({ tracks, shuffling = false, shuffleFrom = null, onShu
 
               <Flex align="center" gap={8} style={{ flexShrink: 0 }}>
                 <span style={{ color: '#64748B', fontSize: '13px', fontWeight: 400 }}>{track.duration}</span>
-                {track.platform && PLATFORM_META[track.platform] && (
+                {availabilityIcons(track).map(item => (
                   <div
-                    style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.4, transition: 'opacity 0.2s' }}
+                    key={item.provider}
+                    title={item.title}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: item.muted ? 0.28 : 0.7,
+                      transition: 'opacity 0.2s',
+                    }}
                     onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = item.muted ? '0.28' : '0.7' }}
                   >
                     <FontAwesomeIcon
-                      icon={PLATFORM_META[track.platform].icon}
-                      style={{ width: '16px', height: '16px', color: PLATFORM_META[track.platform].color }}
+                      icon={item.icon}
+                      style={{ width: '16px', height: '16px', color: item.muted ? '#64748B' : item.color }}
                     />
                   </div>
-                )}
+                ))}
               </Flex>
             </Flex>
           </div>

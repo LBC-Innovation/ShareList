@@ -49,6 +49,11 @@ const PROVIDER_META: Record<string, { color: string; icon: string; tagline: stri
     icon: '🎧',
     tagline: 'Link Apple Music via MusicKit to access your library.',
   },
+  soundcloud: {
+    color: '#FF5500',
+    icon: '☁️',
+    tagline: 'Connect SoundCloud to access playlists you own.',
+  },
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────

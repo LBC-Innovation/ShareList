@@ -4,13 +4,14 @@
  * Merges tracks across all playlists linked to a ShareList so every linked
  * user ends up with the full combined track list in their own playlist.
  *
- * Algorithm (same-provider only — cross-provider matching is a future story):
+ * Algorithm:
  *
  *   For each sharelist_link L:
  *     1. Fetch the current live track list for L's playlist.
- *     2. Collect ALL tracks from every OTHER linked playlist (same provider only).
- *     3. Compute the diff: tracks not yet in L's playlist AND not yet in
- *        sharelist_sync_log for this (link, track) pair.
+ *     2. Collect candidates from every OTHER linked playlist:
+ *        - same provider: native track IDs
+ *        - other provider: dest native IDs from track_mappings when matched
+ *     3. Diff: tracks not yet in L's playlist AND not yet in sharelist_sync_log.
  *     4. Call provider.addTracksToPlaylist() with the diff batch.
  *     5. Record each pushed (link, track) pair in sharelist_sync_log.
  *
@@ -21,10 +22,13 @@
 
 import { supabaseAdmin } from '../lib/supabase'
 import { getProvider } from '../streaming/registry'
+import type { StreamingTrack } from '../streaming/types'
+import { resolveDestTrackId, resolveMappingsForTracks } from './trackMatcher'
 
 // Side-effect: ensure providers are registered
 import '../streaming/spotify'
 import '../streaming/apple-music'
+import '../streaming/soundcloud'
 
 function log(level: string, message: string, ctx: Record<string, unknown> = {}): void {
   console.log(JSON.stringify({ level, message, ...ctx }))
@@ -55,6 +59,7 @@ export interface CrossSyncLinkResult {
   playlistName: string
   tracksAdded: number
   skipped: number
+  unmatched: number
   error?: string
 }
 
@@ -62,6 +67,7 @@ export interface CrossSyncResult {
   sharelistId: string
   links: CrossSyncLinkResult[]
   totalAdded: number
+  totalUnmatched: number
 }
 
 export interface PlaylistOrderLinkResult {
@@ -97,25 +103,26 @@ export async function runCrossSync(
 ): Promise<CrossSyncResult> {
   const linkRows = await loadSharelistLinks(sharelistId)
   if (linkRows.length === 0) {
-    return { sharelistId, links: [], totalAdded: 0 }
+    return { sharelistId, links: [], totalAdded: 0, totalUnmatched: 0 }
   }
 
-  // ── 2. Fetch live tracks for every link (parallel) ──────────────────────────
-  const tracksByLink = new Map<string, string[]>() // linkId → providerTrackIds
+  const tracksByLink = new Map<string, StreamingTrack[]>()
 
   const fetchResults = await Promise.allSettled(
     linkRows.map(async link => {
       const provider = getProvider(link.provider)
       const tracks = await provider.getPlaylistTracks(link.user_id, link.provider_playlist_id)
-      return { linkId: link.id, trackIds: tracks.map(t => t.id) }
+      return { linkId: link.id, tracks }
     }),
   )
 
+  const tagged: Array<StreamingTrack & { provider?: string }> = []
   for (let i = 0; i < fetchResults.length; i++) {
     const result = fetchResults[i]
     const link = linkRows[i]
     if (result.status === 'fulfilled') {
-      tracksByLink.set(result.value.linkId, result.value.trackIds)
+      tracksByLink.set(result.value.linkId, result.value.tracks)
+      tagged.push(...result.value.tracks.map(t => ({ ...t, provider: link.provider })))
     } else {
       log('warn', 'crossSync: failed to fetch tracks for link', {
         sharelistId,
@@ -126,7 +133,9 @@ export async function runCrossSync(
     }
   }
 
-  // ── 3. Load the sync log for this ShareList ─────────────────────────────────
+  const destLinks = linkRows.map(l => ({ provider: l.provider, userId: l.user_id }))
+  const mappings = await resolveMappingsForTracks(tagged, destLinks)
+
   const linkIds = linkRows.map(l => l.id)
   const { data: syncLogRows, error: logErr } = await supabaseAdmin
     .from('sharelist_sync_log')
@@ -135,7 +144,6 @@ export async function runCrossSync(
 
   if (logErr) throw new Error(logErr.message)
 
-  // Map: linkId → Set of already-synced trackIds
   const alreadySynced = new Map<string, Set<string>>()
   for (const row of (syncLogRows ?? []) as SyncLogRow[]) {
     const s = alreadySynced.get(row.sharelist_link_id) ?? new Set<string>()
@@ -143,31 +151,53 @@ export async function runCrossSync(
     alreadySynced.set(row.sharelist_link_id, s)
   }
 
-  // ── 4. For each link, push the diff ─────────────────────────────────────────
   const linkResults: CrossSyncLinkResult[] = []
   let totalAdded = 0
+  let totalUnmatched = 0
 
   for (const link of linkRows) {
-    const existingIds = new Set(tracksByLink.get(link.id) ?? [])
+    const existingIds = new Set((tracksByLink.get(link.id) ?? []).map(t => t.id))
     const syncedIds = alreadySynced.get(link.id) ?? new Set<string>()
-
-    // Collect tracks from all OTHER links on the same provider
     const candidateIds: string[] = []
+    let unmatched = 0
+
     for (const other of linkRows) {
       if (other.id === link.id) continue
-      if (other.provider !== link.provider) continue   // same-provider only
-
       const otherTracks = tracksByLink.get(other.id) ?? []
-      for (const trackId of otherTracks) {
-        if (!existingIds.has(trackId) && !syncedIds.has(trackId)) {
-          candidateIds.push(trackId)
+
+      if (other.provider === link.provider) {
+        for (const track of otherTracks) {
+          if (!existingIds.has(track.id) && !syncedIds.has(track.id)) {
+            candidateIds.push(track.id)
+          }
+        }
+        continue
+      }
+
+      for (const track of otherTracks) {
+        const mapping = mappings.find(m =>
+          m.sourceProvider === other.provider
+          && m.sourceTrackId === track.id
+          && m.destProvider === link.provider,
+        )
+        if (!mapping) {
+          unmatched += 1
+          continue
+        }
+        const destId = mapping.destTrackId
+        if (!destId) {
+          unmatched += 1
+          continue
+        }
+        if (!existingIds.has(destId) && !syncedIds.has(destId)) {
+          candidateIds.push(destId)
         }
       }
     }
 
-    // Deduplicate (multiple other links may share the same track)
     const toAdd = [...new Set(candidateIds)]
     const skipped = candidateIds.length - toAdd.length
+    totalUnmatched += unmatched
 
     if (toAdd.length === 0) {
       log('info', 'crossSync: no new tracks for link', {
@@ -175,6 +205,7 @@ export async function runCrossSync(
         linkId: link.id,
         provider: link.provider,
         playlistName: link.provider_playlist_name,
+        unmatched,
       })
       linkResults.push({
         linkId: link.id,
@@ -182,6 +213,7 @@ export async function runCrossSync(
         playlistName: link.provider_playlist_name,
         tracksAdded: 0,
         skipped,
+        unmatched,
       })
       continue
     }
@@ -194,7 +226,6 @@ export async function runCrossSync(
         toAdd,
       )
 
-      // Record each successfully pushed track in the sync log
       const logInserts = toAdd.map(trackId => ({
         sharelist_link_id: link.id,
         provider_track_id: trackId,
@@ -219,6 +250,7 @@ export async function runCrossSync(
         playlistName: link.provider_playlist_name,
         tracksAdded: addResult.added,
         skipped,
+        unmatched,
       })
 
       totalAdded += addResult.added
@@ -228,6 +260,7 @@ export async function runCrossSync(
         playlistName: link.provider_playlist_name,
         tracksAdded: addResult.added,
         skipped,
+        unmatched,
       })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)
@@ -243,12 +276,13 @@ export async function runCrossSync(
         playlistName: link.provider_playlist_name,
         tracksAdded: 0,
         skipped,
+        unmatched,
         error: errMsg,
       })
     }
   }
 
-  return { sharelistId, links: linkResults, totalAdded }
+  return { sharelistId, links: linkResults, totalAdded, totalUnmatched }
 }
 
 /**
@@ -277,9 +311,10 @@ export async function applyLinkedPlaylistOrder(
       const used = new Set<string>()
 
       for (const id of orderedTrackIds) {
-        if (!liveIds.has(id) || used.has(id)) continue
-        ordered.push(id)
-        used.add(id)
+        const destId = await resolveDestTrackId(id, link.provider, liveIds)
+        if (!destId || used.has(destId)) continue
+        ordered.push(destId)
+        used.add(destId)
       }
       for (const track of live) {
         if (used.has(track.id)) continue

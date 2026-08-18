@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Modal, Select, Button, Typography, Flex, Space, Divider, Spin, Empty, Input, notification, Tabs } from 'antd'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
+import { faSpotify, faApple, faSoundcloud } from '@fortawesome/free-brands-svg-icons'
 import { CheckCircleOutlined, LoadingOutlined, LinkOutlined, DeleteOutlined, ExclamationCircleFilled } from '@ant-design/icons'
 import * as api from '../lib/api'
 import type { ConnectedService, ShareListLink, StreamingPlaylist } from '../lib/api'
@@ -24,8 +24,9 @@ const SL = {
 }
 
 const PROVIDER_META: Record<string, { label: string; icon: typeof faSpotify; color: string }> = {
-  spotify:     { label: 'Spotify',     icon: faSpotify, color: '#1DB954' },
-  apple_music: { label: 'Apple Music', icon: faApple,   color: '#FA243C' },
+  spotify:     { label: 'Spotify',     icon: faSpotify,    color: '#1DB954' },
+  apple_music: { label: 'Apple Music', icon: faApple,      color: '#FA243C' },
+  soundcloud:  { label: 'SoundCloud',  icon: faSoundcloud, color: '#FF5500' },
 }
 
 interface LinkPlaylistModalProps {

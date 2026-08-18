@@ -19,7 +19,7 @@ const STEPS: Step[] = [
   {
     n: '01',
     title: 'Connect a music service',
-    body: 'Open Settings and connect Spotify or Apple Music. ShareList stores the connection on the server — it never streams audio. It only reads and updates playlist metadata and track lists.',
+    body: 'Open Settings and connect Spotify, Apple Music, or SoundCloud. ShareList stores the connection on the server — it never streams audio. It only reads and updates playlist metadata and track lists.',
   },
   {
     n: '02',
@@ -34,22 +34,22 @@ const STEPS: Step[] = [
   {
     n: '04',
     title: 'Link their playlist',
-    body: 'Your friend opens the shared list, taps Manage List, and links one of their playlists on the same service. Both of you then contribute to the same ShareList.',
+    body: 'Your friend opens the shared list, taps Manage List, and links one of their playlists. They can use the same service or a different one. Both of you then contribute to the same ShareList.',
   },
   {
     n: '05',
     title: 'Merge with Sync Lists',
-    body: 'Sync Lists copies songs that are missing from each linked playlist into the others (same service). Linking a playlist also runs this automatically. After a merge, each person keeps their own playlist in Spotify or Apple Music — now with the combined tracks.',
+    body: 'Sync Lists copies songs that are missing from each linked playlist into the others when a matching track exists on that service. Songs that only exist on one catalog stay on the source playlist and are marked unavailable. Linking a playlist also runs this automatically. After a merge, each person keeps their own playlist — now with the combined tracks that could be matched.',
   },
   {
     n: '06',
     title: 'Refresh with Fetch Songs',
-    body: 'Fetch Songs only updates what you see in ShareList: linked playlist names, artwork, and the current song list. It does not change the ShareList title, and it does not add songs to Spotify or Apple Music.',
+    body: 'Fetch Songs only updates what you see in ShareList: linked playlist names, artwork, the current song list, and whether songs can be matched across linked services. It does not change the ShareList title by itself.',
   },
   {
     n: '07',
     title: 'Shuffle the songs',
-    body: 'On a ShareList, tap Shuffle above the song list. Songs float up or down to their new places, then ShareList writes that order to the linked playlists on Spotify or Apple Music.',
+    body: 'On a ShareList, tap Shuffle above the song list. Songs float up or down to their new places, then ShareList writes that order to the linked playlists on each connected service that supports writes.',
   },
   {
     n: '08',
@@ -79,7 +79,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'sharelist',
         term: 'ShareList',
-        meaning: 'A shared list in this app that points at one or more playlists on Spotify or Apple Music. It is a sharing layer, not a music player.',
+        meaning: 'A shared list in this app that points at one or more playlists on Spotify, Apple Music, or SoundCloud. It is a sharing layer, not a music player.',
       },
       {
         key: 'my-lists',
@@ -132,7 +132,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
         key: 'force-sync',
         term: 'Fetch Songs',
         accent: 'accent',
-        meaning: 'Reloads the ShareList in the app. Pulls fresh linked-playlist names, artwork, and songs. Does not change the ShareList title, and does not write anything back to Spotify or Apple Music.',
+        meaning: 'Reloads the ShareList in the app. Pulls fresh linked-playlist names, artwork, songs, and cross-service availability. Does not change the ShareList title, and does not write tracks back to streaming apps.',
       },
       {
         key: 'cross-sync',
@@ -143,7 +143,7 @@ const DEFINITION_GROUPS: DefinitionGroup[] = [
       {
         key: 'unique-songs',
         term: 'Unique songs',
-        meaning: "In the app, a song that exists in more than one linked playlist is shown once. After Sync Lists the same track may still live in each person's Spotify or Apple playlist - that is expected.",
+        meaning: "In the app, a song that exists in more than one linked playlist is shown once. After Sync Lists the same track may still live in each person's streaming playlist - that is expected. Songs that cannot be matched stay on the source playlist.",
       },
       {
         key: 'shuffle',
@@ -226,7 +226,7 @@ export function HowToUse() {
           How to use ShareList
         </Title>
         <Paragraph style={{ color: SL.muted, fontSize: 15, lineHeight: 1.65, margin: 0 }}>
-          ShareList lets people on different accounts share a playlist. Each person keeps their own playlist on Spotify or Apple Music. ShareList is the list in the middle — it does not play songs.
+          ShareList lets people on different accounts share a playlist. Each person keeps their own playlist on Spotify, Apple Music, or SoundCloud. ShareList is the list in the middle — it does not play songs.
         </Paragraph>
       </Flex>
 

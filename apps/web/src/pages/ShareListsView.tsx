@@ -3,7 +3,7 @@ import { Layout, Card, Flex, Typography, Tag, Skeleton, Collapse, Grid } from 'a
 import { PlusOutlined } from '@ant-design/icons'
 import { ChevronDown, ChevronLeft, Users } from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpotify, faApple } from '@fortawesome/free-brands-svg-icons'
+import { faSpotify, faApple, faSoundcloud } from '@fortawesome/free-brands-svg-icons'
 import { useNavigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import type { ShareListSummary } from '../lib/api'
@@ -13,8 +13,9 @@ const { Content } = Layout
 const { Text, Title } = Typography
 
 const PROVIDER_ICONS: Record<string, { icon: typeof faSpotify; color: string }> = {
-  spotify:     { icon: faSpotify, color: '#1DB954' },
-  apple_music: { icon: faApple,   color: '#FA243C' },
+  spotify:     { icon: faSpotify,    color: '#1DB954' },
+  apple_music: { icon: faApple,      color: '#FA243C' },
+  soundcloud:  { icon: faSoundcloud, color: '#FF5500' },
 }
 
 function formatMs(ms: number): string {

@@ -341,6 +341,11 @@ export interface ShareListSummary {
   links: ShareListLink[]
 }
 
+export interface TrackAvailability {
+  provider: string
+  status: 'present' | 'matched' | 'unmatched' | 'ambiguous' | 'unknown'
+}
+
 export interface ShareListTrack {
   id: string
   title: string
@@ -350,6 +355,8 @@ export interface ShareListTrack {
   durationMs: number
   imageUrl?: string
   externalUrl?: string
+  platformIds?: Record<string, string>
+  availability?: TrackAvailability[]
 }
 
 export interface ShareListMember {
@@ -413,6 +420,7 @@ export interface CrossSyncLinkResult {
   playlistName: string
   tracksAdded: number
   skipped: number
+  unmatched?: number
   error?: string
 }
 
@@ -420,6 +428,7 @@ export interface CrossSyncResult {
   sharelistId: string
   links: CrossSyncLinkResult[]
   totalAdded: number
+  totalUnmatched?: number
 }
 
 export function crossSyncShareList(id: string): Promise<ApiResult<CrossSyncResult>> {

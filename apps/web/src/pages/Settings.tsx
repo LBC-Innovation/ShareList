@@ -35,6 +35,7 @@ const SL = {
 const PROVIDER_META: Record<string, { color: string; icon: string }> = {
   spotify: { color: '#1DB954', icon: '🎵' },
   apple_music: { color: '#FA243C', icon: '🎧' },
+  soundcloud: { color: '#FF5500', icon: '☁️' },
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

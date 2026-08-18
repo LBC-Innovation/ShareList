@@ -17,7 +17,20 @@ export interface StreamingTrack {
   durationMs: number
   imageUrl?: string
   externalUrl?: string
+  isrc?: string
 }
+
+export type TrackSearchQuery = {
+  isrc?: string
+  title: string
+  artist: string
+  durationMs: number
+}
+
+export type TrackSearchResult =
+  | { status: 'matched'; track: StreamingTrack; method: 'isrc' | 'metadata' }
+  | { status: 'unmatched' }
+  | { status: 'ambiguous' }
 
 /**
  * Contract that every streaming provider module must implement.
@@ -67,6 +80,12 @@ export interface StreamingProvider {
 
   /** Fetch all tracks from a specific playlist, paginating as needed. */
   getPlaylistTracks(userId: string, playlistId: string): Promise<StreamingTrack[]>
+
+  /**
+   * Search this provider's catalog for a track from another platform.
+   * Optional — providers that cannot search omit it.
+   */
+  searchTrack?(userId: string, query: TrackSearchQuery): Promise<TrackSearchResult>
 
   /**
    * Refreshes the access token if it is close to expiry.

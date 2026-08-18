@@ -81,13 +81,16 @@ export function resolveReturnOrigin(req: Request, candidate?: string): string {
 }
 
 /**
- * Spotify callback URL that matches this API host. Never advertise localhost
+ * OAuth callback URL that matches this API host. Never advertise localhost
  * when the authorize request arrived on a public host.
  */
-export function resolveSpotifyRedirectUri(req: Request): string {
-  const callbackPath = '/streaming/spotify/callback'
+export function resolveProviderRedirectUri(req: Request, provider: string): string {
+  const callbackPath = `/streaming/${provider}/callback`
   const fromRequest = `${publicApiOrigin(req)}${callbackPath}`
-  const configured = parseOrigins(process.env['SPOTIFY_REDIRECT_URI'])
+  const envKey = provider === 'soundcloud'
+    ? 'SOUNDCLOUD_REDIRECT_URI'
+    : 'SPOTIFY_REDIRECT_URI'
+  const configured = parseOrigins(process.env[envKey])
 
   if (configured.includes(fromRequest)) return fromRequest
 
@@ -97,4 +100,9 @@ export function resolveSpotifyRedirectUri(req: Request): string {
 
   if (!wantLocal) return fromRequest
   return configured[0] ?? fromRequest
+}
+
+/** @deprecated Use resolveProviderRedirectUri(req, 'spotify') */
+export function resolveSpotifyRedirectUri(req: Request): string {
+  return resolveProviderRedirectUri(req, 'spotify')
 }

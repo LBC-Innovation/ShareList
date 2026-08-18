@@ -42,6 +42,11 @@ const PROVIDER_META: Record<string, { color: string; icon: string; description: 
     icon: '🎧',
     description: 'Connect Apple Music to access your library playlists via MusicKit.',
   },
+  soundcloud: {
+    color: '#FF5500',
+    icon: '☁️',
+    description: 'Connect SoundCloud to view your playlists and add matching tracks you own.',
+  },
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -63,17 +68,16 @@ export function LinkServiceModal({ provider, displayName, onClose, onConnected }
   const meta = PROVIDER_META[provider] ?? { color: SL.accent, icon: '🎵', description: '' }
 
   // ── Spotify: redirect-based OAuth ────────────────────────────────────────────
-  const handleSpotifyConnect = async () => {
+  const handleRedirectConnect = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const result = await api.getStreamingAuthUrl('spotify')
+      const result = await api.getStreamingAuthUrl(provider)
       if (api.isError(result)) {
         setError(result.error.message)
         return
       }
-      // Navigate the browser — the callback will redirect back to /settings
-      noteDocumentNavigation(result.data.url, 'spotify-oauth-leave')
+      noteDocumentNavigation(result.data.url, `${provider}-oauth-leave`)
       window.location.href = result.data.url
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get auth URL')
@@ -152,7 +156,7 @@ export function LinkServiceModal({ provider, displayName, onClose, onConnected }
     }
   }
 
-  const handleConnect = provider === 'spotify' ? handleSpotifyConnect : handleAppleMusicConnect
+  const handleConnect = provider === 'apple_music' ? handleAppleMusicConnect : handleRedirectConnect
 
   return (
     <Modal

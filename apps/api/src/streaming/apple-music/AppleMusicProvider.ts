@@ -27,7 +27,8 @@ import {
   getTokens,
   deleteTokens,
 } from '../oauthHelpers'
-import type { StreamingPlaylist, StreamingProvider, StreamingTrack } from '../types'
+import type { StreamingPlaylist, StreamingProvider, StreamingTrack, TrackSearchQuery, TrackSearchResult } from '../types'
+import { pickBestTrackMatch } from '../../services/trackMatchScore'
 
 // ── Env helpers ───────────────────────────────────────────────────────────────
 
@@ -248,6 +249,8 @@ export class AppleMusicProvider implements StreamingProvider {
           albumName?: string
           durationInMillis?: number
           artwork?: { url: string }
+          isrc?: string
+          url?: string
         }
       }
       interface AMTracksResponse { data: AMTrack[]; next?: string }
@@ -263,7 +266,8 @@ export class AppleMusicProvider implements StreamingProvider {
           album: a.albumName,
           durationMs: a.durationInMillis ?? 0,
           imageUrl,
-          externalUrl: undefined,
+          externalUrl: a.url,
+          isrc: a.isrc,
         })
       }
       url = data.next ? `https://api.music.apple.com${data.next}` : null
@@ -298,6 +302,41 @@ export class AppleMusicProvider implements StreamingProvider {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async replacePlaylistTracks(_userId: string, _playlistId: string, _trackIds: string[]): Promise<{ written: number }> {
     throw new Error('replacePlaylistTracks is not yet implemented for Apple Music')
+  }
+
+  async searchTrack(userId: string, query: TrackSearchQuery): Promise<TrackSearchResult> {
+    const musicUserToken = await this.refreshTokenIfNeeded(userId)
+    const developerToken = generateDeveloperToken()
+    const stored = await getTokens(userId, PROVIDER_NAME)
+    const storefront = stored?.providerUserId
+    if (!storefront) throw new Error('Apple Music storefront is unknown; reconnect Apple Music')
+
+    const headers = {
+      Authorization: `Bearer ${developerToken}`,
+      'Music-User-Token': musicUserToken,
+    }
+
+    if (query.isrc) {
+      const isrcUrl = `https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/songs?filter[isrc]=${encodeURIComponent(query.isrc.trim())}`
+      const isrcRes = await fetch(isrcUrl, { headers })
+      if (isrcRes.ok) {
+        const hits = appleCatalogSongs((await isrcRes.json()) as AppleCatalogSongsResponse)
+        if (hits.length === 1 && hits[0]) {
+          return { status: 'matched', track: hits[0], method: 'isrc' }
+        }
+        if (hits.length > 1) return { status: 'ambiguous' }
+      }
+    }
+
+    const term = `${query.title} ${query.artist}`.trim()
+    const searchUrl = `https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search?types=songs&limit=8&term=${encodeURIComponent(term)}`
+    const res = await fetch(searchUrl, { headers })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`Apple Music search failed (${res.status}): ${body}`)
+    }
+    const data = (await res.json()) as { results?: { songs?: AppleCatalogSongsResponse } }
+    return pickBestTrackMatch(query, appleCatalogSongs(data.results?.songs))
   }
 
   async disconnect(userId: string): Promise<void> {
@@ -335,4 +374,41 @@ export class AppleMusicProvider implements StreamingProvider {
     if (!storefrontId) throw new Error('Apple Music storefront response missing id')
     return storefrontId
   }
+}
+
+interface AppleCatalogSong {
+  id: string
+  attributes?: {
+    name?: string
+    artistName?: string
+    albumName?: string
+    durationInMillis?: number
+    artwork?: { url: string }
+    isrc?: string
+    url?: string
+  }
+}
+
+interface AppleCatalogSongsResponse {
+  data?: AppleCatalogSong[]
+}
+
+function appleCatalogSongs(payload: AppleCatalogSongsResponse | undefined): StreamingTrack[] {
+  const tracks: StreamingTrack[] = []
+  for (const item of payload?.data ?? []) {
+    const a = item.attributes
+    if (!item.id || !a?.name) continue
+    const rawArt = a.artwork?.url
+    tracks.push({
+      id: item.id,
+      title: a.name,
+      artist: a.artistName ?? '',
+      album: a.albumName,
+      durationMs: a.durationInMillis ?? 0,
+      imageUrl: rawArt ? rawArt.replace('{w}', '300').replace('{h}', '300') : undefined,
+      externalUrl: a.url,
+      isrc: a.isrc,
+    })
+  }
+  return tracks
 }

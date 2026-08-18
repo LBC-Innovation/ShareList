@@ -43,16 +43,17 @@ export interface OAuthState {
   userId: string
   returnOrigin?: string
   redirectUri?: string
+  codeVerifier?: string
 }
 
 /**
  * Generates a signed, expiring state string for an OAuth flow.
- * Format: `v2.<userId>.<expiresAt>.<nonce>.<returnOriginB64>.<redirectUriB64>.<hmac>`
- * `returnOrigin` / `redirectUri` are base64url or `-` when omitted.
+ * v2: `v2.<userId>.<expiresAt>.<nonce>.<returnOriginB64>.<redirectUriB64>.<hmac>`
+ * v3: same as v2 plus a base64url PKCE `codeVerifier` field before the hmac.
  */
 export function generateState(
   userId: string,
-  extra: { returnOrigin?: string; redirectUri?: string } = {},
+  extra: { returnOrigin?: string; redirectUri?: string; codeVerifier?: string } = {},
 ): string {
   const expiresAt = Date.now() + STATE_TTL_MS
   const nonce = crypto.randomBytes(16).toString('hex')
@@ -62,7 +63,13 @@ export function generateState(
   const redirectUri = extra.redirectUri
     ? Buffer.from(extra.redirectUri).toString('base64url')
     : '-'
-  const payload = `v2.${userId}.${expiresAt}.${nonce}.${returnOrigin}.${redirectUri}`
+  const version = extra.codeVerifier ? 'v3' : 'v2'
+  const codeVerifier = extra.codeVerifier
+    ? Buffer.from(extra.codeVerifier).toString('base64url')
+    : null
+  const payload = codeVerifier
+    ? `${version}.${userId}.${expiresAt}.${nonce}.${returnOrigin}.${redirectUri}.${codeVerifier}`
+    : `${version}.${userId}.${expiresAt}.${nonce}.${returnOrigin}.${redirectUri}`
   const sig = crypto
     .createHmac('sha256', stateSecret())
     .update(payload)
@@ -77,7 +84,7 @@ function decodeStateField(value: string): string | undefined {
 
 /**
  * Verifies a state string and returns the embedded userId and optional
- * return/redirect URLs. Accepts v1 (legacy) and v2 payloads.
+ * return/redirect URLs. Accepts v1 (legacy), v2, and v3 (PKCE) payloads.
  */
 export function verifyState(state: string): OAuthState {
   const parts = state.split('.')
@@ -104,6 +111,24 @@ export function verifyState(state: string): OAuthState {
       userId,
       returnOrigin: decodeStateField(returnOriginB64),
       redirectUri: decodeStateField(redirectUriB64),
+    }
+  }
+
+  if (version === 'v3') {
+    if (parts.length !== 8) throw new Error('Invalid state format')
+    const [, userId, expiresAtStr, nonce, returnOriginB64, redirectUriB64, codeVerifierB64, receivedSig] = parts as [
+      string, string, string, string, string, string, string, string,
+    ]
+    assertFreshSignature(
+      `v3.${userId}.${expiresAtStr}.${nonce}.${returnOriginB64}.${redirectUriB64}.${codeVerifierB64}`,
+      expiresAtStr,
+      receivedSig,
+    )
+    return {
+      userId,
+      returnOrigin: decodeStateField(returnOriginB64),
+      redirectUri: decodeStateField(redirectUriB64),
+      codeVerifier: decodeStateField(codeVerifierB64),
     }
   }
 
